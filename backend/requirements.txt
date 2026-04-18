@@ -1,0 +1,50 @@
+# --- Core API & Server ---
+fastapi
+uvicorn[standard]
+python-multipart
+
+# --- Core AI ---
+anthropic
+langchain
+langchain-anthropic
+langchain-community
+langchain-text-splitters
+langgraph
+
+# --- Vector Stores ---
+chromadb
+faiss-cpu
+
+# --- PDF Processing ---
+pdfplumber
+pymupdf
+
+# --- Office Document Processing ---
+python-pptx
+python-docx
+
+# --- Embeddings ---
+voyageai
+
+# --- Database & SQL ---
+sqlglot
+sqlalchemy
+psycopg2-binary
+
+# --- Session & Caching ---
+redis
+
+# --- Data & Export ---
+pandas
+openpyxl
+numpy
+
+# --- Config ---
+pydantic-settings
+python-dotenv
+
+# --- Utils ---
+aiofiles
+httpx
+beautifulsoup4
+lxml

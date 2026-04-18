@@ -1,0 +1,45 @@
+# AI Hub .gitignore
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+venv/
+.venv/
+env/
+
+# Environment — never commit secrets
+.env
+
+# Runtime storage — persisted locally, excluded from version control
+backend/storage/uploads/*
+backend/storage/vector_stores/*
+backend/storage/exports/*
+!backend/storage/uploads/.gitkeep
+!backend/storage/vector_stores/.gitkeep
+!backend/storage/exports/.gitkeep
+
+# Node
+node_modules/
+frontend/dist/
+frontend/.vite/
+
+# Vector stores and databases
+.chroma/
+*.db
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

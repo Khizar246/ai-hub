@@ -1,0 +1,75 @@
+# Single Anthropic SDK wrapper used by all agents — never call anthropic.Anthropic() directly
+
+import base64
+from collections.abc import AsyncGenerator
+
+from anthropic import Anthropic
+
+from core.config import settings
+
+client = Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+
+
+def call_claude(
+    prompt: str,
+    system: str = "",
+    model: str | None = None,
+    temperature: float = 0.1,
+    max_tokens: int = 2000,
+) -> str:
+    """Send a text prompt to Claude and return the full response text."""
+    resolved_model = model or settings.CLAUDE_MODEL
+    response = client.messages.create(
+        model=resolved_model,
+        max_tokens=max_tokens,
+        temperature=temperature,
+        system=system,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    return response.content[0].text  # type: ignore[union-attr]
+
+
+def call_claude_vision(image_bytes: bytes, prompt: str) -> str:
+    """Send a rendered PDF page image to Claude vision for content extraction."""
+    image_data = base64.standard_b64encode(image_bytes).decode("utf-8")
+    response = client.messages.create(
+        model=settings.CLAUDE_VISION_MODEL,
+        max_tokens=2000,
+        messages=[
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "image",
+                        "source": {
+                            "type": "base64",
+                            "media_type": "image/png",
+                            "data": image_data,
+                        },
+                    },
+                    {"type": "text", "text": prompt},
+                ],
+            }
+        ],
+    )
+    return response.content[0].text  # type: ignore[union-attr]
+
+
+async def stream_claude(
+    prompt: str,
+    system: str = "",
+    model: str | None = None,
+    temperature: float = 0.1,
+    max_tokens: int = 2000,
+) -> AsyncGenerator[str, None]:
+    """Async generator that streams Claude response tokens for SSE delivery."""
+    resolved_model = model or settings.CLAUDE_MODEL
+    with client.messages.stream(
+        model=resolved_model,
+        max_tokens=max_tokens,
+        temperature=temperature,
+        system=system,
+        messages=[{"role": "user", "content": prompt}],
+    ) as stream:
+        for text in stream.text_stream:
+            yield text
