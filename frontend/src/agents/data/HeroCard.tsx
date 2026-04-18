@@ -16,7 +16,7 @@ function formatValue(val: string | number | null): string {
 export default function HeroCard({ heroData }: HeroCardProps) {
   const entries = Object.entries(heroData);
   const [primaryKey, primaryVal] = entries[0] ?? ['Result', null];
-  const [valueKey, valueVal] = entries[1] ?? entries[0] ?? ['', null];
+  const [, valueVal] = entries[1] ?? entries[0] ?? ['', null];
 
   return (
     <div className="xl:col-span-1 bg-gradient-to-br from-blue-600 to-indigo-900 rounded-[3.5rem] p-10 text-white shadow-2xl flex flex-col justify-between">

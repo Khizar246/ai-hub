@@ -14,7 +14,7 @@ interface PostgresConfig {
   host: string;
   port: string;
   database: string;
-  user: string;
+  username: string;
   password: string;
 }
 

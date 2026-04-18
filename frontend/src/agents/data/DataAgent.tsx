@@ -2,7 +2,7 @@
 // Uses useUIStore for dark mode and useSession for session ID (no own nav bar — Shell handles that).
 
 import { useState } from 'react';
-import { ArrowLeft, Database } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import ConnectionPanel from './ConnectionPanel';
 import SchemaEditor from './SchemaEditor';
 import QueryWorkspace from './QueryWorkspace';
