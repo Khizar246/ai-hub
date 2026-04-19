@@ -1,4 +1,4 @@
-// Hub home: hero + equal 3-column agent card grid.
+// Hub home: hero + responsive agent card grid.
 
 import { useNavigate } from 'react-router-dom';
 import { FileSearch, Newspaper, Database, ArrowRight } from 'lucide-react';
@@ -18,15 +18,15 @@ function AgentCard({ agent }: { agent: AgentMeta }) {
   return (
     <div
       onClick={() => agent.status === 'active' && navigate(agent.route)}
-      className="group border border-[#1e1e1e] bg-[#111111] rounded-[10px] p-6 flex flex-col hover:border-[#2a2a2a] hover:bg-[#131313] transition-all duration-150 cursor-pointer"
+      className="group border border-[#1e1e1e] bg-[#111111] rounded-[10px] p-6 flex flex-col hover:border-[#2a2a2a] hover:bg-[#131313] transition-all duration-150 cursor-pointer min-w-0 overflow-hidden"
     >
       {/* Top row: icon + status pill */}
       <div className="flex items-start justify-between mb-4">
         <Icon
           size={18}
-          className="text-[#525252] group-hover:text-amber-400 transition-colors duration-150"
+          className="text-[#525252] group-hover:text-amber-400 transition-colors duration-150 shrink-0"
         />
-        <span className="bg-[#1a1a1a] border border-[#262626] text-[11px] font-medium tracking-wide px-2 py-0.5 rounded-full">
+        <span className="bg-[#1a1a1a] border border-[#262626] text-[11px] font-medium tracking-wide px-2 py-0.5 rounded-full shrink-0">
           {agent.status === 'active' ? (
             <>
               <span className="text-amber-400">●</span>
@@ -76,33 +76,33 @@ function AgentCard({ agent }: { agent: AgentMeta }) {
 
 export default function Dashboard() {
   return (
-    <div className="max-w-[1000px] mx-auto px-0 py-4">
+    <div className="max-w-[1000px] mx-auto py-4">
       {/* Hero */}
-      <div className="mb-12">
+      <div className="mb-10 md:mb-12">
         <div className="flex items-center gap-2 mb-3">
-          <div className="w-1 h-8 bg-amber-400 rounded-full" />
-          <span className="text-[12px] font-semibold tracking-[0.12em] uppercase text-amber-400">
+          <div className="w-1 h-7 md:h-8 bg-amber-400 rounded-full" />
+          <span className="text-[11px] md:text-[12px] font-semibold tracking-[0.12em] uppercase text-amber-400">
             AI Workspace
           </span>
         </div>
-        <h1 className="text-[36px] font-bold text-[#fafafa] tracking-tight leading-tight mb-2">
+        <h1 className="text-[26px] md:text-[32px] lg:text-[36px] font-bold text-[#fafafa] tracking-tight leading-tight mb-2">
           Welcome to AI Hub.
         </h1>
-        <p className="text-[15px] text-[#525252]">
+        <p className="text-[13px] md:text-[14px] lg:text-[15px] text-[#525252]">
           Your intelligent workspace, ready when you are.
         </p>
       </div>
 
       {/* Agents section label */}
-      <div className="flex items-center gap-4 mb-6">
+      <div className="flex items-center gap-4 mb-5 md:mb-6">
         <span className="text-[12px] font-semibold tracking-[0.12em] uppercase text-amber-400/60">
           Agents
         </span>
         <div className="flex-1 h-px bg-amber-400/20" />
       </div>
 
-      {/* Equal 3-column grid */}
-      <div className="grid grid-cols-3 gap-4">
+      {/* Responsive grid: 1 col mobile, 2 col tablet, 3 col desktop */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5 lg:gap-4">
         {agentRegistry.map((agent) => (
           <AgentCard key={agent.id} agent={agent} />
         ))}

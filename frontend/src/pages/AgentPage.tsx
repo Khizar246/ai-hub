@@ -35,20 +35,20 @@ function Accordion({
     <div className="border border-[#1e1e1e] bg-[#111111] rounded-[8px] mb-2 overflow-hidden">
       <button
         onClick={() => setOpen(!open)}
-        className="w-full px-5 py-3.5 text-[14px] font-medium text-[#a3a3a3] hover:text-[#fafafa] flex items-center justify-between cursor-pointer transition-colors duration-100"
+        className="w-full px-4 md:px-5 py-3 md:py-3.5 text-[14px] font-medium text-[#a3a3a3] hover:text-[#fafafa] flex items-center justify-between cursor-pointer transition-colors duration-100"
       >
         <span className="flex items-center gap-2">
           <span className="text-[#525252]">{icon}</span>
           {title}
         </span>
         {open
-          ? <ChevronUp size={13} className="text-[#525252]" />
-          : <ChevronDown size={13} className="text-[#525252]" />
+          ? <ChevronUp size={13} className="text-[#525252] shrink-0" />
+          : <ChevronDown size={13} className="text-[#525252] shrink-0" />
         }
       </button>
 
       {open && (
-        <div className="px-5 pb-4 text-[14px] text-[#525252] leading-relaxed border-t border-[#1e1e1e]">
+        <div className="px-4 md:px-5 pb-4 text-[14px] text-[#525252] leading-relaxed border-t border-[#1e1e1e]">
           <div className="pt-3">{children}</div>
         </div>
       )}
@@ -66,17 +66,17 @@ export default function AgentPage() {
   const component = agentComponents[agent.id];
 
   return (
-    <div className="max-w-[1000px] mx-auto pb-16">
+    <div className="max-w-[1000px] mx-auto pb-12 md:pb-16 overflow-hidden">
       {/* Page header */}
-      <div className="flex items-center gap-3 mb-6">
-        <Icon size={18} className="text-[#525252] shrink-0" />
-        <h1 className="text-[26px] font-semibold text-[#fafafa] tracking-tight">
+      <div className="flex items-center gap-3 mb-5 md:mb-6 min-w-0">
+        <Icon size={16} className="text-[#525252] shrink-0 md:w-[18px] md:h-[18px]" />
+        <h1 className="text-[20px] md:text-[26px] font-semibold text-[#fafafa] tracking-tight truncate">
           {agent.name}
         </h1>
       </div>
 
       {/* Tags */}
-      <div className="flex flex-wrap gap-1.5 mb-6">
+      <div className="flex flex-wrap gap-1.5 mb-5 md:mb-6">
         {agent.tags.map((tag) => (
           <span
             key={tag}
@@ -88,12 +88,12 @@ export default function AgentPage() {
       </div>
 
       {/* Accordions */}
-      <div className="mb-6">
+      <div className="mb-5 md:mb-6">
         <Accordion title="How it works" icon={<Info size={13} />}>
           {agent.howItWorks}
         </Accordion>
         <Accordion title="Instructions" icon={<BookOpen size={13} />}>
-          <ol className="space-y-4 list-none pt-1">
+          <ol className="space-y-3 md:space-y-4 list-none pt-1">
             {agent.instructions.split('. Step ').map((step, i) => {
               const text = i === 0 ? step.replace(/^Step \d+: /, '') : step.replace(/^\d+: /, '');
               return (
@@ -101,7 +101,7 @@ export default function AgentPage() {
                   <span className="w-6 h-6 rounded-full bg-amber-400 text-[#0a0a0a] text-[12px] font-bold flex items-center justify-center shrink-0 mt-0.5">
                     {i + 1}
                   </span>
-                  <span className="text-[14px] text-[#525252] leading-relaxed pt-0.5">
+                  <span className="text-[13px] md:text-[14px] text-[#525252] leading-relaxed pt-0.5">
                     {text.replace(/\.$/, '')}
                   </span>
                 </li>
@@ -113,7 +113,7 @@ export default function AgentPage() {
 
       {/* Agent interactive component */}
       {component ?? (
-        <div className="border border-[#1e1e1e] bg-[#111111] rounded-[10px] flex items-center justify-center py-20">
+        <div className="border border-[#1e1e1e] bg-[#111111] rounded-[10px] flex items-center justify-center py-16 md:py-20">
           <p className="text-[14px] text-[#525252]">Agent UI coming soon</p>
         </div>
       )}

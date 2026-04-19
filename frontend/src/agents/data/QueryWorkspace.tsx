@@ -415,14 +415,14 @@ export default function QueryWorkspace({
             {!collapsedCards.has(index) && (
               <div className="border-t border-[#1e1e1e] p-4 flex flex-col gap-4">
 
-                {/* SQL + Query Logic side by side */}
-                <div className="flex gap-4 items-start">
+                {/* SQL + Query Logic: stacked on mobile, side-by-side on desktop */}
+                <div className="flex flex-col lg:flex-row gap-4 items-start">
 
-                  {/* SQL card — left, grows to fill space */}
-                  <div className="flex-1 min-w-0 flex flex-col gap-3">
-                    <div className="bg-[#0a0a0a] border border-[#1e1e1e] rounded-[10px] overflow-hidden">
+                  {/* SQL card — full width mobile, grows on desktop */}
+                  <div className="flex-1 min-w-0 w-full flex flex-col gap-3">
+                    <div className="bg-[#0a0a0a] border border-[#1e1e1e] rounded-[10px] overflow-hidden max-w-full">
                       {/* Code block */}
-                      <div className="p-6 min-h-[160px]">
+                      <div className="p-4 md:p-6 min-h-[120px] md:min-h-[160px] overflow-x-auto">
                         {editingId === item.id ? (
                           <textarea
                             className="w-full bg-transparent text-blue-200 font-mono text-[14px] outline-none min-h-[140px] resize-none"
@@ -479,9 +479,9 @@ export default function QueryWorkspace({
                     </div>
                   </div>
 
-                  {/* Query Logic — right, fixed 260px, only shown when explanation exists */}
+                  {/* Query Logic — full width mobile, fixed 260px on desktop */}
                   {item.explanation && (
-                    <div className="w-[260px] flex-shrink-0 bg-[#0f0f0f] border border-[#1e1e1e] rounded-[10px] p-5">
+                    <div className="w-full lg:w-[260px] flex-shrink-0 bg-[#0f0f0f] border border-[#1e1e1e] rounded-[10px] p-5">
                       <div className="flex items-center gap-2 mb-3">
                         <span className="w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0" />
                         <span className="text-[11px] font-semibold uppercase tracking-wider text-[#525252]">Query Logic</span>

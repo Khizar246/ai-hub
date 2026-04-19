@@ -176,11 +176,11 @@ export default function ConnectionPanel({ sessionId: _sessionId, onComplete }: C
 
       {showDbSelector && (
         <div
-          className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center"
+          className="fixed inset-0 bg-black/70 z-50 flex flex-col md:items-center md:justify-center"
           onClick={() => setShowDbSelector(false)}
         >
           <div
-            className="bg-[#111111] border border-[#262626] rounded-[14px] p-8 w-full max-w-[600px] mx-4"
+            className="bg-[#111111] border-0 md:border border-[#262626] md:rounded-[14px] p-6 md:p-8 w-full md:max-w-[600px] md:mx-4 h-full md:h-auto overflow-y-auto"
             onClick={e => e.stopPropagation()}
           >
             <div className="mb-8">
@@ -192,7 +192,7 @@ export default function ConnectionPanel({ sessionId: _sessionId, onComplete }: C
               </p>
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <button
                 onClick={() => handleDbSelect('postgresql', '5432')}
                 className="flex flex-col items-center gap-4 p-6 bg-[#0f0f0f] border border-[#1e1e1e] rounded-[10px] hover:border-amber-400/40 hover:bg-[#131313] transition-all duration-150 group text-left"
@@ -252,7 +252,7 @@ export default function ConnectionPanel({ sessionId: _sessionId, onComplete }: C
   // ── Postgres login form ────────────────────────────────────────────────────────
   if (panelStep === 'postgres-login') {
     return (
-      <div className="p-8 rounded-[10px] border border-[#1e1e1e] bg-[#111111] max-w-md mx-auto space-y-4">
+      <div className="p-5 md:p-8 rounded-[10px] border border-[#1e1e1e] bg-[#111111] max-w-md mx-auto space-y-4">
         <h2 className="text-[18px] font-semibold text-[#fafafa] mb-6 flex items-center gap-2">
           <Server className="text-[#525252]" size={18} /> Database Login
         </h2>
