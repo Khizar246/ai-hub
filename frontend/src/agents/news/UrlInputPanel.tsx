@@ -14,15 +14,14 @@ interface ArticleSummary {
 }
 
 interface UrlInputPanelProps {
-  darkMode: boolean;
   sessionId: string;
   onIngested: (articles: ArticleSummary[]) => void;
 }
 
 const MAX_URLS = 5;
 
-export default function UrlInputPanel({ darkMode, sessionId: _sessionId, onIngested }: UrlInputPanelProps) {
-  const [urls, setUrls] = useState<string[]>(['']);
+export default function UrlInputPanel({ sessionId: _sessionId, onIngested }: UrlInputPanelProps) {
+  const [urls, setUrls] = useState<string[]>(['https://red.anthropic.com/2026/mythos-preview/']);
   const [loading, setLoading] = useState(false);
   const [articles, setArticles] = useState<ArticleSummary[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -61,8 +60,8 @@ export default function UrlInputPanel({ darkMode, sessionId: _sessionId, onInges
 
   const statusIcon = (status: ArticleSummary['status']) => {
     if (status === 'ok')      return <CheckCircle size={14} className="text-emerald-500 shrink-0" />;
-    if (status === 'skipped') return <SkipForward size={14} className="text-slate-400 shrink-0" />;
-    return                           <XCircle     size={14} className="text-red-400 shrink-0" />;
+    if (status === 'skipped') return <SkipForward  size={14} className="text-[#525252] shrink-0" />;
+    return                           <XCircle      size={14} className="text-red-400 shrink-0" />;
   };
 
   const statusLabel = (a: ArticleSummary) => {
@@ -72,29 +71,30 @@ export default function UrlInputPanel({ darkMode, sessionId: _sessionId, onInges
   };
 
   return (
-    <div
-      className={`rounded-[2.5rem] border p-10 space-y-8 shadow-sm ${
-        darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'
-      }`}
-    >
+    <div className="rounded-[10px] border border-[#1e1e1e] bg-[#111111] p-8 space-y-6">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <div className="bg-emerald-500 p-2.5 rounded-xl text-white shadow-lg shadow-emerald-500/30">
+        <div className="bg-amber-400 p-2.5 rounded-[8px] text-[#0a0a0a]">
           <Rss size={18} />
         </div>
         <div>
-          <h2 className="text-lg font-black">Add Article URLs</h2>
-          <p className={`text-xs font-medium ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-            Up to {MAX_URLS} URLs per session
-          </p>
+          <h2 className="text-[18px] font-semibold text-[#fafafa]">Add Article URLs</h2>
+          <p className="text-[13px] text-[#525252]">Up to {MAX_URLS} URLs per session</p>
         </div>
+      </div>
+
+      {/* Sample hint */}
+      <div className="flex items-start gap-2 px-4 py-3 rounded-[8px] border border-amber-400/20 bg-amber-400/5 text-[13px] text-[#a3a3a3]">
+        <span>
+          💡 A sample article is pre-loaded — click <strong className="text-[#fafafa]">Ingest Articles</strong> to try it instantly, or replace with your own URL.
+        </span>
       </div>
 
       {/* URL inputs */}
       <div className="space-y-3">
         {urls.map((url, i) => (
           <div key={i} className="flex gap-2 items-center">
-            <span className={`text-[10px] font-black w-6 text-center shrink-0 ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+            <span className="text-[11px] font-semibold w-6 text-center shrink-0 text-[#525252]">
               {i + 1}
             </span>
             <input
@@ -103,17 +103,11 @@ export default function UrlInputPanel({ darkMode, sessionId: _sessionId, onInges
               onChange={(e) => updateUrl(i, e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter' && i === urls.length - 1) addUrl(); }}
               placeholder="https://example.com/article"
-              className={`flex-1 px-5 py-3.5 rounded-2xl text-sm font-medium outline-none transition-all ${
-                darkMode
-                  ? 'bg-slate-900 text-white placeholder-slate-600 focus:ring-1 focus:ring-emerald-500'
-                  : 'bg-slate-50 text-slate-800 placeholder-slate-400 border border-transparent focus:border-emerald-400'
-              }`}
+              className="flex-1 px-4 py-3 rounded-[6px] text-[14px] font-medium outline-none transition-all bg-[#0f0f0f] text-[#fafafa] placeholder-[#525252] border border-[#262626] focus:border-amber-400/50 focus:ring-1 focus:ring-amber-400/20"
             />
             <button
               onClick={() => removeUrl(i)}
-              className={`p-2.5 rounded-xl transition-colors shrink-0 ${
-                darkMode ? 'hover:bg-slate-700 text-slate-500' : 'hover:bg-slate-100 text-slate-400'
-              }`}
+              className="p-2.5 rounded-[6px] transition-colors shrink-0 hover:bg-[#1a1a1a] text-[#525252] hover:text-[#a3a3a3]"
             >
               <Trash2 size={15} />
             </button>
@@ -133,38 +127,38 @@ export default function UrlInputPanel({ darkMode, sessionId: _sessionId, onInges
           size="md"
           loading={loading}
           onClick={handleIngest}
-          className="flex-1 !bg-emerald-500 hover:!bg-emerald-600 !shadow-emerald-500/20"
+          className="flex-1"
         >
           {loading ? 'Processing…' : 'Ingest Articles'}
         </Button>
       </div>
 
       {/* Error */}
-      {error && <p className="text-xs text-red-400 font-bold px-1">{error}</p>}
+      {error && <p className="text-[13px] text-red-400 font-medium px-1">{error}</p>}
 
       {/* Per-article results */}
       {articles.length > 0 && (
         <div className="space-y-2">
-          <p className={`text-[10px] font-black uppercase tracking-widest ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-[#525252]">
             Processing Results
           </p>
           {articles.map((a, i) => (
             <div
               key={i}
-              className={`flex items-center gap-3 px-4 py-3 rounded-2xl border ${
+              className={`flex items-center gap-3 px-4 py-3 rounded-[8px] border ${
                 a.status === 'ok'
-                  ? darkMode ? 'bg-emerald-900/20 border-emerald-800' : 'bg-emerald-50 border-emerald-100'
+                  ? 'bg-emerald-500/10 border-emerald-500/30'
                   : a.status === 'error'
-                  ? darkMode ? 'bg-red-900/20 border-red-900' : 'bg-red-50 border-red-100'
-                  : darkMode ? 'bg-slate-900/40 border-slate-700' : 'bg-slate-50 border-slate-100'
+                  ? 'bg-red-500/10 border-red-500/30'
+                  : 'bg-[#0f0f0f] border-[#1e1e1e]'
               }`}
             >
               {statusIcon(a.status)}
               <div className="flex-1 min-w-0">
-                <p className={`text-xs font-bold truncate ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>
+                <p className="text-[13px] font-semibold truncate text-[#a3a3a3]">
                   {a.title !== a.url ? a.title : a.url}
                 </p>
-                <p className={`text-[10px] ${a.status === 'error' ? 'text-red-400' : darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+                <p className={`text-[11px] ${a.status === 'error' ? 'text-red-400' : 'text-[#525252]'}`}>
                   {statusLabel(a)}
                 </p>
               </div>

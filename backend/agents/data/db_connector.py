@@ -78,6 +78,156 @@ def fetch_postgres_metadata(
         conn.close()
 
 
+class PostgreSQLConnector:
+    def __init__(self, config: PostgresConfig):
+        self.config = config
+
+    def list_tables(self) -> list[str]:
+        return list_postgres_tables(self.config)
+
+    def fetch_metadata(self, tables: list[str]) -> list[dict]:
+        raw = fetch_postgres_metadata(self.config, tables)
+        return [
+            {
+                "table": item["table_name"],
+                "columns": [{"name": c["name"], "type": c["data_type"]} for c in item["columns"]],
+                "samples": [],
+            }
+            for item in raw
+        ]
+
+    def execute_query(self, sql: str) -> dict:
+        conn = connect_postgres(self.config)
+        try:
+            cur = conn.cursor()
+            cur.execute(sql)
+            columns = [desc[0] for desc in cur.description] if cur.description else []
+            rows = [dict(zip(columns, row)) for row in cur.fetchall()]
+            return {"columns": columns, "rows": rows}
+        finally:
+            conn.close()
+
+
+class MySQLConnector:
+    def __init__(self, config: PostgresConfig):
+        self.config = config
+
+    def get_connection(self):
+        import mysql.connector
+        ssl_args = {"ssl_disabled": not self.config.ssl_required}
+        return mysql.connector.connect(
+            host=self.config.host,
+            port=int(self.config.port),
+            database=self.config.database,
+            user=self.config.username,
+            password=self.config.password,
+            **ssl_args,
+        )
+
+    def list_tables(self) -> list[str]:
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        cursor.execute("SHOW TABLES")
+        tables = [row[0] for row in cursor.fetchall()]
+        cursor.close()
+        conn.close()
+        return tables
+
+    def fetch_metadata(self, tables: list[str]) -> list[dict]:
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        metadata = []
+        for table in tables:
+            cursor.execute(f"DESCRIBE `{table}`")
+            columns = [{"name": row[0], "type": row[1]} for row in cursor.fetchall()]
+            cursor.execute(f"SELECT * FROM `{table}` LIMIT 3")
+            samples = cursor.fetchall()
+            metadata.append({"table": table, "columns": columns, "samples": samples})
+        cursor.close()
+        conn.close()
+        return metadata
+
+    def execute_query(self, sql: str) -> dict:
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        cursor.execute(sql)
+        columns = [desc[0] for desc in cursor.description] if cursor.description else []
+        rows = [dict(zip(columns, row)) for row in cursor.fetchall()]
+        cursor.close()
+        conn.close()
+        return {"columns": columns, "rows": rows}
+
+
+class MSSQLConnector:
+    def __init__(self, config: PostgresConfig):
+        self.config = config
+
+    def _get_connection_string(self) -> str:
+        trust_cert = "no" if self.config.ssl_required else "yes"
+        return (
+            f"DRIVER={{ODBC Driver 17 for SQL Server}};"
+            f"SERVER={self.config.host},{self.config.port};"
+            f"DATABASE={self.config.database};"
+            f"UID={self.config.username};"
+            f"PWD={self.config.password};"
+            f"TrustServerCertificate={trust_cert};"
+        )
+
+    def get_connection(self):
+        import pyodbc
+        return pyodbc.connect(self._get_connection_string())
+
+    def list_tables(self) -> list[str]:
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES
+            WHERE TABLE_TYPE = 'BASE TABLE'
+            ORDER BY TABLE_NAME
+        """)
+        tables = [row[0] for row in cursor.fetchall()]
+        cursor.close()
+        conn.close()
+        return tables
+
+    def fetch_metadata(self, tables: list[str]) -> list[dict]:
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        metadata = []
+        for table in tables:
+            cursor.execute(f"""
+                SELECT COLUMN_NAME, DATA_TYPE
+                FROM INFORMATION_SCHEMA.COLUMNS
+                WHERE TABLE_NAME = '{table}'
+            """)
+            columns = [{"name": row[0], "type": row[1]} for row in cursor.fetchall()]
+            cursor.execute(f"SELECT TOP 3 * FROM [{table}]")
+            samples = cursor.fetchall()
+            metadata.append({"table": table, "columns": columns, "samples": samples})
+        cursor.close()
+        conn.close()
+        return metadata
+
+    def execute_query(self, sql: str) -> dict:
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        cursor.execute(sql)
+        columns = [desc[0] for desc in cursor.description] if cursor.description else []
+        rows = [dict(zip(columns, row)) for row in cursor.fetchall()]
+        cursor.close()
+        conn.close()
+        return {"columns": columns, "rows": rows}
+
+
+def get_connector(config: PostgresConfig):
+    if config.db_type == "mysql":
+        return MySQLConnector(config)
+    elif config.db_type == "mssql":
+        return MSSQLConnector(config)
+    else:
+        return PostgreSQLConnector(config)
+
+
 def parse_excel_to_sqlite(file_bytes: bytes, session_id: str) -> list[dict[str, Any]]:
     """
     Load Excel bytes into a session-scoped SQLite DB and infer SQL column types.
@@ -121,7 +271,18 @@ def execute_sql(
     Execute query against the appropriate database.
     Returns columns, rows, and hero_data (populated when exactly 1 row is returned).
     """
-    if dialect == "postgres":
+    if dialect in ("mysql", "mssql"):
+        if not config:
+            raise DatabaseConnectionError("No database configuration provided.")
+        connector = get_connector(config)
+        result = connector.execute_query(query)
+        columns = result["columns"]
+        rows_dicts = result["rows"]
+        rows = [[row.get(col) for col in columns] for row in rows_dicts]
+        hero_data = {columns[i]: rows[0][i] for i in range(len(columns))} if len(rows) == 1 else None
+        return {"columns": columns, "rows": rows, "hero_data": hero_data}
+
+    if dialect in ("postgres", "postgresql"):
         if not config:
             raise DatabaseConnectionError("No Postgres configuration provided.")
         conn: psycopg2.extensions.connection | sqlite3.Connection = connect_postgres(config)

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Any, Dict, List, TypedDict
+from typing import Any, TypedDict
 
 from langgraph.graph import END, StateGraph
 
@@ -27,9 +27,9 @@ class AuditState(TypedDict):
     session_id: str
     rule: str
     criticality: str
-    retrieved_chunks: List[str]
+    retrieved_chunks: list[str]
     raw_llm_output: str
-    parsed_result: Dict[str, Any]
+    parsed_result: dict[str, Any]
 
 
 # ---------------------------------------------------------------------------
@@ -102,8 +102,8 @@ _graph = _build_graph()
 
 async def conduct_audit(
     session_id: str,
-    rules: List[Dict[str, Any]],
-) -> List[Dict[str, Any]]:
+    rules: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
     """
     Run the audit graph for each rule in the list.
     Returns a list of parsed result dicts.
@@ -113,7 +113,7 @@ async def conduct_audit(
     """
     BATCH_SIZE = 5
 
-    async def _run_rule(rule_def: Dict[str, Any]) -> Dict[str, Any]:
+    async def _run_rule(rule_def: dict[str, Any]) -> dict[str, Any]:
         initial_state: AuditState = {
             "session_id": session_id,
             "rule": rule_def["rule"],
@@ -139,7 +139,7 @@ async def conduct_audit(
                 "requires_action": True,
             }
 
-    results: List[Dict[str, Any]] = []
+    results: list[dict[str, Any]] = []
     for i in range(0, len(rules), BATCH_SIZE):
         batch = rules[i : i + BATCH_SIZE]
         batch_results = await asyncio.gather(*[_run_rule(r) for r in batch])

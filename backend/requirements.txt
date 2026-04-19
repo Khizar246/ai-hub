@@ -28,8 +28,9 @@ voyageai
 
 # --- Database & SQL ---
 sqlglot
-sqlalchemy
 psycopg2-binary
+mysql-connector-python==8.3.0
+pyodbc==5.1.0
 
 # --- Session & Caching ---
 redis
@@ -37,14 +38,11 @@ redis
 # --- Data & Export ---
 pandas
 openpyxl
-numpy
 
 # --- Config ---
 pydantic-settings
-python-dotenv
 
 # --- Utils ---
-aiofiles
 httpx
 beautifulsoup4
 lxml

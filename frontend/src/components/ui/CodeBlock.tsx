@@ -1,13 +1,7 @@
-// Syntax-highlighted SQL display with copy-to-clipboard and language label.
+// Syntax-highlighted SQL display — no copy button (handled by QueryWorkspace toolbar).
 
-import { useState } from 'react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import {
-  oneDark,
-  oneLight,
-} from 'react-syntax-highlighter/dist/esm/styles/prism';
-import { Copy, Check } from 'lucide-react';
-import { useUIStore } from '../../lib/store';
+import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
 interface CodeBlockProps {
   code: string;
@@ -15,68 +9,28 @@ interface CodeBlockProps {
 }
 
 export default function CodeBlock({ code, language = 'sql' }: CodeBlockProps) {
-  const { darkMode } = useUIStore();
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(code);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1800);
-    } catch {
-      // clipboard not available — silently ignore
-    }
-  };
-
   return (
-    <div
-      className={`rounded-2xl overflow-hidden border ${
-        darkMode ? 'border-slate-700' : 'border-slate-200'
-      }`}
-    >
-      {/* Header bar */}
-      <div
-        className={`flex items-center justify-between px-4 py-2 border-b ${
-          darkMode
-            ? 'bg-slate-800 border-slate-700'
-            : 'bg-slate-50 border-slate-200'
-        }`}
-      >
-        <span
-          className={`text-[9px] font-black uppercase tracking-widest ${
-            darkMode ? 'text-slate-500' : 'text-slate-400'
-          }`}
-        >
+    <div className="bg-[#0a0a0a] border border-[#1e1e1e] rounded-[8px] overflow-hidden">
+      {/* Language label */}
+      <div className="flex items-center px-4 py-2 bg-[#0f0f0f] border-b border-[#1e1e1e]">
+        <span className="text-[10px] text-[#525252] font-mono font-semibold uppercase tracking-widest">
           {language}
         </span>
-        <button
-          onClick={handleCopy}
-          className={`flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest transition-colors ${
-            copied
-              ? 'text-emerald-500'
-              : darkMode
-              ? 'text-slate-500 hover:text-slate-300'
-              : 'text-slate-400 hover:text-slate-600'
-          }`}
-        >
-          {copied ? <Check size={11} /> : <Copy size={11} />}
-          {copied ? 'Copied' : 'Copy'}
-        </button>
       </div>
 
       {/* Code */}
       <SyntaxHighlighter
         language={language}
-        style={darkMode ? oneDark : oneLight}
+        style={oneDark}
         customStyle={{
+          background: '#0a0a0a',
+          padding: '16px',
           margin: 0,
           borderRadius: 0,
           fontSize: '0.78rem',
           lineHeight: 1.6,
-          padding: '1rem 1.25rem',
-          background: darkMode ? '#0f172a' : '#ffffff',
         }}
-        wrapLongLines
+        codeTagProps={{ style: { background: '#0a0a0a' } }}
       >
         {code}
       </SyntaxHighlighter>

@@ -21,7 +21,6 @@ interface Message {
 }
 
 interface ChatInterfaceProps {
-  darkMode: boolean;
   sessionId: string;
   articleCount: number;
 }
@@ -38,7 +37,7 @@ const confidenceColors: Record<string, string> = {
 function ConfidencePill({ level }: { level: string }) {
   return (
     <span
-      className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border ${
+      className={`text-[11px] font-semibold uppercase tracking-widest px-2 py-0.5 rounded-full border ${
         confidenceColors[level] ?? confidenceColors.medium
       }`}
     >
@@ -47,7 +46,7 @@ function ConfidencePill({ level }: { level: string }) {
   );
 }
 
-export default function ChatInterface({ darkMode, sessionId: _sessionId, articleCount }: ChatInterfaceProps) {
+export default function ChatInterface({ sessionId: _sessionId, articleCount }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -106,36 +105,28 @@ export default function ChatInterface({ darkMode, sessionId: _sessionId, article
 
   return (
     <div
-      className={`rounded-[2.5rem] border flex flex-col shadow-sm overflow-hidden ${
-        darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'
-      }`}
+      className="rounded-[10px] border border-[#1e1e1e] bg-[#111111] flex flex-col overflow-hidden"
       style={{ minHeight: '520px' }}
     >
       {/* Header */}
-      <div
-        className={`px-10 py-6 border-b flex items-center justify-between ${
-          darkMode ? 'border-slate-700 bg-slate-900/40' : 'border-slate-100 bg-slate-50'
-        }`}
-      >
+      <div className="px-6 py-4 border-b border-[#1e1e1e] bg-[#0f0f0f] flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <BookOpen size={18} className="text-emerald-500" />
-          <span className="text-sm font-black uppercase tracking-widest">News Research</span>
+          <BookOpen size={16} className="text-[#525252]" />
+          <span className="text-[14px] font-semibold text-[#a3a3a3] uppercase tracking-widest">
+            News Research
+          </span>
         </div>
-        <span
-          className={`text-[10px] font-bold px-3 py-1 rounded-full border ${
-            darkMode ? 'border-slate-700 text-slate-400' : 'border-slate-200 text-slate-500'
-          }`}
-        >
+        <span className="text-[11px] font-medium px-3 py-1 rounded-full border border-[#262626] text-[#525252]">
           {articleCount} article{articleCount !== 1 ? 's' : ''} indexed
         </span>
       </div>
 
       {/* Message list */}
-      <div className="flex-1 overflow-y-auto px-10 py-8 space-y-8">
+      <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
         {messages.length === 0 && !loading && (
-          <div className="flex flex-col items-center justify-center h-full min-h-[200px] gap-3 opacity-40">
-            <BookOpen size={36} />
-            <p className="text-sm font-bold">Ask anything about your articles…</p>
+          <div className="flex flex-col items-center justify-center h-full min-h-[200px] gap-3 opacity-30">
+            <BookOpen size={32} />
+            <p className="text-[14px] font-medium">Ask anything about your articles…</p>
           </div>
         )}
 
@@ -145,33 +136,24 @@ export default function ChatInterface({ darkMode, sessionId: _sessionId, article
           const sourcesOpen = expandedSources.has(idx);
 
           if (isUser) {
-            // Use shared ChatBubble for user messages
             return (
-              <ChatBubble
-                key={idx}
-                role="user"
-                content={msg.content}
-              />
+              <div key={idx} className="flex items-baseline gap-2 px-4 py-3 bg-[#111111] border border-[#1e1e1e] rounded-[8px] w-full">
+                <span className="text-amber-400 font-semibold text-[13px] flex-shrink-0">Q.</span>
+                <span className="text-[14px] text-[#fafafa] leading-relaxed">{msg.content}</span>
+              </div>
             );
           }
 
-          // Assistant messages: custom layout with confidence + source toggle
           return (
             <div key={idx} className="flex gap-3 flex-row">
               {/* Avatar */}
-              <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-1 bg-emerald-500 text-white">
-                <BookOpen size={14} />
+              <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-1 bg-amber-400 text-[#0a0a0a]">
+                <BookOpen size={13} />
               </div>
 
               <div className="max-w-[75%] space-y-2 items-start flex flex-col">
-                {/* Bubble — uses StreamingText for content rendering */}
-                <div
-                  className={`px-6 py-4 rounded-[1.5rem] rounded-tl-sm text-sm leading-relaxed font-medium ${
-                    darkMode
-                      ? 'bg-slate-900/60 text-slate-200 border border-slate-700'
-                      : 'bg-slate-50 text-slate-800 border border-slate-100'
-                  }`}
-                >
+                {/* Bubble */}
+                <div className="px-5 py-3.5 rounded-[8px] rounded-tl-sm text-[14px] leading-relaxed text-[#a3a3a3] bg-[#0f0f0f] border border-[#1e1e1e]">
                   <StreamingText text={cleanText(msg.content)} streaming={false} />
                 </div>
 
@@ -181,11 +163,7 @@ export default function ChatInterface({ darkMode, sessionId: _sessionId, article
                   {hasSources && (
                     <button
                       onClick={() => toggleSources(idx)}
-                      className={`flex items-center gap-1 text-[10px] font-black uppercase tracking-widest transition-colors ${
-                        darkMode
-                          ? 'text-slate-500 hover:text-emerald-400'
-                          : 'text-slate-400 hover:text-emerald-600'
-                      }`}
+                      className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-widest transition-colors text-[#525252] hover:text-amber-400"
                     >
                       {sourcesOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
                       {msg.sources.length} source{msg.sources.length !== 1 ? 's' : ''}
@@ -202,7 +180,6 @@ export default function ChatInterface({ darkMode, sessionId: _sessionId, article
                         title={src.title}
                         url={src.url}
                         excerpt={src.excerpt}
-                        darkMode={darkMode}
                       />
                     ))}
                   </div>
@@ -212,14 +189,13 @@ export default function ChatInterface({ darkMode, sessionId: _sessionId, article
           );
         })}
 
-        {/* Loading indicator — shared ChatBubble skeleton */}
         {loading && <ChatBubble role="assistant" content="" loading />}
 
         <div ref={bottomRef} />
       </div>
 
       {/* Input bar */}
-      <div className={`px-8 py-6 border-t ${darkMode ? 'border-slate-700' : 'border-slate-100'}`}>
+      <div className="px-6 py-4 border-t border-[#1e1e1e] bg-[#0f0f0f]">
         <div className="flex gap-3">
           <input
             ref={inputRef}
@@ -228,18 +204,14 @@ export default function ChatInterface({ darkMode, sessionId: _sessionId, article
             onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
             placeholder="Ask a question about your articles…"
             disabled={loading}
-            className={`flex-1 px-6 py-4 rounded-2xl text-sm font-medium outline-none transition-all disabled:opacity-50 ${
-              darkMode
-                ? 'bg-slate-900 text-white placeholder-slate-600 focus:ring-1 focus:ring-emerald-500'
-                : 'bg-slate-50 text-slate-800 placeholder-slate-400 border border-transparent focus:border-emerald-400'
-            }`}
+            className="flex-1 px-4 py-3 rounded-[6px] text-[14px] font-medium outline-none transition-all disabled:opacity-50 bg-[#0a0a0a] text-[#fafafa] placeholder-[#525252] border border-[#262626] focus:border-amber-400/50 focus:ring-1 focus:ring-amber-400/20"
           />
           <button
             onClick={sendMessage}
             disabled={loading || !input.trim()}
-            className="bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white px-6 py-4 rounded-2xl transition-all shadow-lg shadow-emerald-500/20 flex items-center gap-2 font-bold text-sm"
+            className="bg-amber-400 hover:bg-amber-300 disabled:opacity-50 text-[#0a0a0a] px-5 py-3 rounded-[6px] transition-all flex items-center gap-2 font-semibold text-[14px]"
           >
-            {loading ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+            {loading ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
           </button>
         </div>
       </div>

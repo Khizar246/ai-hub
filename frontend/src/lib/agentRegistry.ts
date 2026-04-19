@@ -30,7 +30,6 @@ export const agentRegistry: AgentMeta[] = [
     route: '/agent/audit',
     status: 'active',
     tags: ['compliance', 'PDF', 'documents', 'audit'],
-    color: 'blue',
   },
   {
     id: 'news',
@@ -38,7 +37,7 @@ export const agentRegistry: AgentMeta[] = [
     tagline: 'Deep Q&A on any news article via URL',
     description:
       'Paste one or more news article URLs and ask any question about their content. ' +
-      'The agent scrapes articles with Crawl4AI, indexes them in a session-scoped FAISS store, ' +
+      'The agent scrapes articles with httpx + BeautifulSoup, indexes them in a session-scoped FAISS store, ' +
       'and maintains a full multi-turn conversation so you can ask follow-up questions naturally. ' +
       'Previously indexed URLs are cached so re-visits are instant.',
     instructions:
@@ -47,7 +46,7 @@ export const agentRegistry: AgentMeta[] = [
       'Step 3: Type your question in the chat box and press Enter. ' +
       'Step 4: View the answer along with source excerpts. Add more URLs at any time.',
     howItWorks:
-      'Articles are scraped using Crawl4AI which returns clean markdown. ' +
+      'Articles are scraped using httpx + BeautifulSoup which returns clean markdown. ' +
       'Text is chunked and embedded via VoyageAI into a FAISS vector store scoped to your session. ' +
       'A LangGraph state graph retrieves the top relevant chunks for each question, ' +
       'then generates an answer that cites its sources. Full chat history is preserved across turns.',
@@ -55,7 +54,6 @@ export const agentRegistry: AgentMeta[] = [
     route: '/agent/news',
     status: 'active',
     tags: ['news', 'research', 'Q&A', 'articles'],
-    color: 'emerald',
   },
   {
     id: 'data',
@@ -79,7 +77,6 @@ export const agentRegistry: AgentMeta[] = [
     route: '/agent/data',
     status: 'active',
     tags: ['SQL', 'database', 'PostgreSQL', 'analytics'],
-    color: 'purple',
   },
 ];
 

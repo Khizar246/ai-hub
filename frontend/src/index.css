@@ -1,100 +1,59 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* ─── CSS custom properties ──────────────────────────────────────────────── */
-
 :root {
-  /* Agent accent colours */
-  --color-audit:   59 130 246;   /* blue-500   */
-  --color-news:    16 185 129;   /* emerald-500 */
-  --color-data:   168  85 247;   /* purple-500  */
-
-  /* Light mode surfaces */
-  --surface-bg:      248 250 252;   /* slate-50   */
-  --surface-card:    255 255 255;   /* white      */
-  --surface-border:  226 232 240;   /* slate-200  */
-  --surface-muted:   241 245 249;   /* slate-100  */
-  --text-primary:     15  23  42;   /* slate-900  */
-  --text-secondary:  100 116 139;   /* slate-500  */
+  --noir-base:      #0a0a0a;
+  --noir-surface:   #111111;
+  --noir-elevated:  #1a1a1a;
+  --noir-border:    #262626;
+  --noir-highlight: #404040;
+  --amber:          #f59e0b;
+  --amber-bright:   #fbbf24;
+  --amber-subtle:   rgba(245, 158, 11, 0.08);
+  --text-primary:   #fafafa;
+  --text-secondary: #a3a3a3;
+  --text-muted:     #525252;
 }
 
-.dark {
-  /* Dark mode surfaces */
-  --surface-bg:       15  23  42;   /* slate-900  */
-  --surface-card:     30  41  59;   /* slate-800  */
-  --surface-border:   51  65  85;   /* slate-700  */
-  --surface-muted:    15  23  42;   /* slate-900  */
-  --text-primary:    248 250 252;   /* slate-50   */
-  --text-secondary:  148 163 184;   /* slate-400  */
-}
+* { box-sizing: border-box; }
 
-/* ─── Base resets ────────────────────────────────────────────────────────── */
-
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
-
-html {
-  font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+body {
+  background-color: var(--noir-base);
+  color: var(--text-primary);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
   -webkit-font-smoothing: antialiased;
 }
 
-body {
-  margin: 0;
-  background-color: rgb(var(--surface-bg));
-  color: rgb(var(--text-primary));
-  transition: background-color 0.2s, color 0.2s;
-}
+/* Scrollbar */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: var(--noir-base); }
+::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #444; }
 
-/* ─── Scrollbar styling ──────────────────────────────────────────────────── */
-
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: rgb(var(--surface-border));
-  border-radius: 9999px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: rgb(var(--text-secondary));
-}
-
-/* ─── Streaming cursor animation ─────────────────────────────────────────── */
-
-@keyframes blink {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0; }
-}
-
+/* Streaming cursor */
 .streaming-cursor::after {
-  content: '▍';
-  display: inline-block;
-  animation: blink 0.9s step-end infinite;
-  margin-left: 1px;
-  color: currentColor;
-  opacity: 0.7;
+  content: '|';
+  animation: blink 1s step-end infinite;
+  color: var(--amber);
 }
+@keyframes blink { 50% { opacity: 0; } }
 
-/* ─── Slide-in animation (used by ChatInterface) ─────────────────────────── */
+/* Mono font utility */
+.font-mono { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
 
+/* Slide-in animation */
 @keyframes slide-in-from-bottom {
-  from { opacity: 0; transform: translateY(1rem); }
-  to   { opacity: 1; transform: translateY(0);    }
+  from { opacity: 0; transform: translateY(0.5rem); }
+  to   { opacity: 1; transform: translateY(0); }
 }
+.animate-in { animation-fill-mode: both; }
+.fade-in    { animation-name: slide-in-from-bottom; }
+.duration-500 { animation-duration: 500ms; }
 
-.animate-in {
-  animation-fill-mode: both;
-}
-.fade-in {
-  animation-name: slide-in-from-bottom;
-}
-.duration-500 {
-  animation-duration: 500ms;
-}
+.syntax-highlighter *::selection { background: transparent; }
+pre *::selection { background: rgba(255,255,255,0.1); }

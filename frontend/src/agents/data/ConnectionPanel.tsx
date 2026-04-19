@@ -1,5 +1,4 @@
 // DB config form and table selection — ported from Talk_To_Data_Engine.
-// Uses shared Button component; API calls via lib/api.ts.
 
 import { useState } from 'react';
 import { FileSpreadsheet, Server, CheckCircle, CheckSquare, Square } from 'lucide-react';
@@ -18,32 +17,41 @@ interface TableReview {
 }
 
 interface PostgresConfig {
+  db_type: 'postgresql' | 'mysql' | 'mssql';
   host: string;
   port: string;
   database: string;
   username: string;
   password: string;
+  ssl_required: boolean;
 }
 
 interface ConnectionPanelProps {
-  darkMode: boolean;
   sessionId: string;
   onComplete: (tables: TableReview[], dialect: string, pgConfig: PostgresConfig) => void;
 }
 
 type PanelStep = 'landing' | 'postgres-login' | 'table-selection';
 
-export default function ConnectionPanel({ darkMode, sessionId: _sessionId, onComplete }: ConnectionPanelProps) {
+export default function ConnectionPanel({ sessionId: _sessionId, onComplete }: ConnectionPanelProps) {
   const [panelStep, setPanelStep] = useState<PanelStep>('landing');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const defaultPorts: Record<PostgresConfig['db_type'], string> = {
+    postgresql: '5432',
+    mysql: '3306',
+    mssql: '1433',
+  };
+
   const [pgConfig, setPgConfig] = useState<PostgresConfig>({
+    db_type: 'postgresql',
     host: 'localhost',
     port: '5432',
     database: '',
     username: 'postgres',
     password: '',
+    ssl_required: false,
   });
   const [pgTableList, setPgTableList] = useState<string[]>([]);
   const [selectedPgTables, setSelectedPgTables] = useState<string[]>([]);
@@ -58,7 +66,6 @@ export default function ConnectionPanel({ darkMode, sessionId: _sessionId, onCom
       selectedPgTables.length === pgTableList.length ? [] : [...pgTableList]
     );
 
-  // ── Excel upload ─────────────────────────────────────────────────────────────
   const handleExcelUpload = async (file: File) => {
     setLoading(true);
     setError(null);
@@ -75,18 +82,11 @@ export default function ConnectionPanel({ darkMode, sessionId: _sessionId, onCom
     setLoading(false);
   };
 
-  // ── Postgres connect ──────────────────────────────────────────────────────────
   const handlePostgresConnect = async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await api.post('/agents/data/list-postgres-tables', {
-        host: pgConfig.host,
-        port: pgConfig.port,
-        database: pgConfig.database,
-        username: pgConfig.username,
-        password: pgConfig.password,
-      });
+      const res = await api.post('/agents/data/list-postgres-tables', pgConfig);
       setPgTableList(res.data.tables);
       setPanelStep('table-selection');
     } catch {
@@ -95,22 +95,15 @@ export default function ConnectionPanel({ darkMode, sessionId: _sessionId, onCom
     setLoading(false);
   };
 
-  // ── Import metadata ───────────────────────────────────────────────────────────
   const handleImportMetadata = async () => {
     setLoading(true);
     setError(null);
     try {
       const res = await api.post('/agents/data/fetch-postgres-metadata', {
-        config: {
-          host: pgConfig.host,
-          port: pgConfig.port,
-          database: pgConfig.database,
-          username: pgConfig.username,
-          password: pgConfig.password,
-        },
+        config: pgConfig,
         selected_tables: selectedPgTables,
       });
-      onComplete(res.data.tables, 'postgres', pgConfig);
+      onComplete(res.data.tables, pgConfig.db_type, pgConfig);
     } catch {
       setError('Metadata fetch failed.');
     }
@@ -120,21 +113,15 @@ export default function ConnectionPanel({ darkMode, sessionId: _sessionId, onCom
   // ── Landing ───────────────────────────────────────────────────────────────────
   if (panelStep === 'landing') {
     return (
-      <div className="max-w-4xl mx-auto mt-10 grid grid-cols-1 md:grid-cols-2 gap-8">
+      <div className="max-w-4xl mx-auto mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Excel / CSV card */}
-        <label
-          className={`p-12 rounded-[3rem] border-2 cursor-pointer transition-all shadow-xl shadow-slate-900/5 group relative overflow-hidden ${
-            darkMode
-              ? 'bg-slate-800 border-transparent hover:border-emerald-500'
-              : 'bg-white border-transparent hover:border-emerald-500'
-          }`}
-        >
-          <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform">
+        <label className="p-10 rounded-[10px] border border-[#1e1e1e] bg-[#111111] cursor-pointer transition-all group relative overflow-hidden hover:border-amber-400/40 hover:bg-[#131313]">
+          <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:scale-110 transition-transform">
             <FileSpreadsheet size={80} />
           </div>
-          <FileSpreadsheet size={40} className="text-emerald-500 mb-6" />
-          <h2 className="text-2xl font-black mb-2">Excel / CSV</h2>
-          <p className={`text-sm leading-relaxed ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+          <FileSpreadsheet size={32} className="text-[#a3a3a3] group-hover:text-amber-400 transition-colors mb-5" />
+          <h2 className="text-[18px] font-semibold text-[#fafafa] mb-1.5">Excel / CSV</h2>
+          <p className="text-[14px] text-[#525252] leading-relaxed">
             Upload local data and query via SQLite.
           </p>
           <input
@@ -145,25 +132,36 @@ export default function ConnectionPanel({ darkMode, sessionId: _sessionId, onCom
             disabled={loading}
           />
           {loading && (
-            <p className="mt-4 text-xs text-emerald-500 font-bold animate-pulse">Parsing…</p>
+            <p className="mt-4 text-[13px] text-amber-400 animate-pulse">Parsing…</p>
           )}
+          <div
+            className="mt-5 flex flex-col gap-2 text-left"
+            onClick={(e) => e.preventDefault()}
+          >
+            <p className="text-[12px] text-[#525252]">
+              💡 No file? Download our sample finance dataset to explore the agent.
+            </p>
+            <a
+              href="/samples/sample_finance_data.xlsx"
+              download="sample_finance_data.xlsx"
+              className="inline-flex w-fit px-3 py-1 rounded-[6px] text-[12px] font-medium border border-[#262626] text-[#a3a3a3] hover:border-amber-400/40 hover:text-amber-400 transition-colors"
+            >
+              Download Sample Dataset
+            </a>
+          </div>
         </label>
 
         {/* PostgreSQL card */}
         <div
           onClick={() => setPanelStep('postgres-login')}
-          className={`p-12 rounded-[3rem] border-2 cursor-pointer transition-all shadow-xl shadow-slate-900/5 group relative overflow-hidden ${
-            darkMode
-              ? 'bg-slate-800 border-transparent hover:border-purple-600'
-              : 'bg-white border-transparent hover:border-purple-600'
-          }`}
+          className="p-10 rounded-[10px] border border-[#1e1e1e] bg-[#111111] cursor-pointer transition-all group relative overflow-hidden hover:border-amber-400/40 hover:bg-[#131313]"
         >
-          <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform">
+          <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:scale-110 transition-transform">
             <Server size={80} />
           </div>
-          <Server size={40} className="text-purple-600 mb-6" />
-          <h2 className="text-2xl font-black mb-2">PostgreSQL</h2>
-          <p className={`text-sm leading-relaxed ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+          <Server size={32} className="text-[#a3a3a3] group-hover:text-amber-400 transition-colors mb-5" />
+          <h2 className="text-[18px] font-semibold text-[#fafafa] mb-1.5">PostgreSQL</h2>
+          <p className="text-[14px] text-[#525252] leading-relaxed">
             Connect to production database for live analysis.
           </p>
         </div>
@@ -174,24 +172,35 @@ export default function ConnectionPanel({ darkMode, sessionId: _sessionId, onCom
   // ── Postgres login form ────────────────────────────────────────────────────────
   if (panelStep === 'postgres-login') {
     return (
-      <div
-        className={`p-12 rounded-[3rem] border shadow-2xl max-w-md mx-auto space-y-4 ${
-          darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'
-        }`}
-      >
-        <h2 className="text-xl font-black mb-6 flex items-center gap-2">
-          <Server className="text-purple-600" /> Database Login
+      <div className="p-8 rounded-[10px] border border-[#1e1e1e] bg-[#111111] max-w-md mx-auto space-y-4">
+        <h2 className="text-[18px] font-semibold text-[#fafafa] mb-6 flex items-center gap-2">
+          <Server className="text-[#525252]" size={18} /> Database Login
         </h2>
+
+        <div className="flex flex-col gap-1.5">
+          <label className="text-[11px] font-semibold uppercase tracking-wider text-[#525252]">
+            Database Type
+          </label>
+          <select
+            value={pgConfig.db_type}
+            onChange={e => setPgConfig(prev => ({
+              ...prev,
+              db_type: e.target.value as PostgresConfig['db_type'],
+              port: defaultPorts[e.target.value as PostgresConfig['db_type']],
+            }))}
+            className="bg-[#111111] border border-[#1e1e1e] text-[#fafafa] rounded-[6px] px-3 py-2 text-[13px] focus:outline-none focus:border-[#404040]"
+          >
+            <option value="postgresql">PostgreSQL</option>
+            <option value="mysql">MySQL</option>
+            <option value="mssql">Microsoft SQL Server</option>
+          </select>
+        </div>
 
         {(['host', 'database', 'username'] as const).map((field) => (
           <div key={field} className="space-y-1">
-            <label className="text-[10px] font-black uppercase text-slate-400 ml-2">{field}</label>
+            <label className="text-[11px] font-semibold uppercase text-[#525252] ml-1">{field}</label>
             <input
-              className={`w-full p-4 rounded-2xl text-sm outline-none font-bold transition-all ${
-                darkMode
-                  ? 'bg-slate-900 text-white focus:ring-1 focus:ring-purple-500'
-                  : 'bg-slate-50 border border-transparent focus:border-purple-500'
-              }`}
+              className="w-full p-3 rounded-[6px] text-[14px] outline-none font-medium transition-all bg-[#0f0f0f] text-[#fafafa] border border-[#262626] focus:border-amber-400/50 focus:ring-1 focus:ring-amber-400/20 placeholder-[#525252]"
               placeholder={`Enter ${field}…`}
               value={pgConfig[field]}
               onChange={(e) => setPgConfig({ ...pgConfig, [field]: e.target.value })}
@@ -200,41 +209,46 @@ export default function ConnectionPanel({ darkMode, sessionId: _sessionId, onCom
         ))}
 
         <div className="space-y-1">
-          <label className="text-[10px] font-black uppercase text-slate-400 ml-2">port</label>
+          <label className="text-[11px] font-semibold uppercase text-[#525252] ml-1">port</label>
           <input
-            className={`w-full p-4 rounded-2xl text-sm outline-none font-bold transition-all ${
-              darkMode
-                ? 'bg-slate-900 text-white focus:ring-1 focus:ring-purple-500'
-                : 'bg-slate-50 border border-transparent focus:border-purple-500'
-            }`}
+            className="w-full p-3 rounded-[6px] text-[14px] outline-none font-medium transition-all bg-[#0f0f0f] text-[#fafafa] border border-[#262626] focus:border-amber-400/50 focus:ring-1 focus:ring-amber-400/20"
             value={pgConfig.port}
             onChange={(e) => setPgConfig({ ...pgConfig, port: e.target.value })}
           />
         </div>
 
         <div className="space-y-1">
-          <label className="text-[10px] font-black uppercase text-slate-400 ml-2">password</label>
+          <label className="text-[11px] font-semibold uppercase text-[#525252] ml-1">password</label>
           <input
             type="password"
-            className={`w-full p-4 rounded-2xl text-sm outline-none font-bold transition-all ${
-              darkMode
-                ? 'bg-slate-900 text-white focus:ring-1 focus:ring-purple-500'
-                : 'bg-slate-50 border border-transparent focus:border-purple-500'
-            }`}
+            className="w-full p-3 rounded-[6px] text-[14px] outline-none font-medium transition-all bg-[#0f0f0f] text-[#fafafa] border border-[#262626] focus:border-amber-400/50 focus:ring-1 focus:ring-amber-400/20 placeholder-[#525252]"
             placeholder="••••••••"
             value={pgConfig.password}
             onChange={(e) => setPgConfig({ ...pgConfig, password: e.target.value })}
           />
         </div>
 
-        {error && <p className="text-xs text-red-400 font-bold px-1">{error}</p>}
+        <div className="flex items-center gap-3">
+          <input
+            type="checkbox"
+            id="ssl_required"
+            checked={pgConfig.ssl_required}
+            onChange={e => setPgConfig(prev => ({ ...prev, ssl_required: e.target.checked }))}
+            className="w-4 h-4 accent-amber-400"
+          />
+          <label htmlFor="ssl_required" className="text-[13px] text-[#a3a3a3] cursor-pointer">
+            Require SSL (recommended for cloud databases)
+          </label>
+        </div>
+
+        {error && <p className="text-[13px] text-red-400 font-medium px-1">{error}</p>}
 
         <Button
           variant="primary"
           size="lg"
           loading={loading}
           onClick={handlePostgresConnect}
-          className="w-full mt-2 !bg-purple-600 hover:!bg-purple-700 !shadow-purple-600/20"
+          className="w-full mt-2"
         >
           {loading ? 'Connecting…' : 'Connect Server'}
         </Button>
@@ -244,46 +258,40 @@ export default function ConnectionPanel({ darkMode, sessionId: _sessionId, onCom
 
   // ── Table selection ────────────────────────────────────────────────────────────
   return (
-    <div
-      className={`p-12 rounded-[3rem] border shadow-sm max-w-4xl mx-auto ${
-        darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'
-      }`}
-    >
-      <div className="flex justify-between items-center mb-10">
-        <h2 className="text-2xl font-black">Select Tables</h2>
+    <div className="p-8 rounded-[10px] border border-[#1e1e1e] bg-[#111111] max-w-4xl mx-auto">
+      <div className="flex justify-between items-center mb-8">
+        <h2 className="text-[18px] font-semibold text-[#fafafa]">Select Tables</h2>
         <button
           onClick={toggleSelectAll}
-          className="flex items-center gap-2 text-xs font-black text-purple-600 bg-purple-50 dark:bg-purple-900/20 dark:text-purple-400 px-4 py-2 rounded-xl"
+          className="flex items-center gap-2 text-[12px] font-medium text-[#a3a3a3] border border-[#262626] bg-[#0f0f0f] px-3 py-1.5 rounded-[6px] hover:border-amber-400/40 hover:text-amber-400 transition-colors"
         >
           {selectedPgTables.length === pgTableList.length ? (
-            <CheckSquare size={16} />
+            <CheckSquare size={14} />
           ) : (
-            <Square size={16} />
+            <Square size={14} />
           )}
           All Tables
         </button>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-10">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-8">
         {pgTableList.map((t) => (
           <div
             key={t}
             onClick={() => toggleTable(t)}
-            className={`p-5 rounded-[1.5rem] border-2 cursor-pointer transition-all font-bold text-sm flex justify-between items-center ${
+            className={`p-4 rounded-[8px] border-2 cursor-pointer transition-all font-medium text-[14px] flex justify-between items-center ${
               selectedPgTables.includes(t)
-                ? 'border-purple-600 bg-purple-50 dark:bg-purple-900/20 text-purple-600'
-                : darkMode
-                ? 'border-slate-700 text-slate-500'
-                : 'border-slate-100 text-slate-400'
+                ? 'border-amber-400 bg-amber-400/5 text-amber-400'
+                : 'border-[#1e1e1e] bg-[#0f0f0f] text-[#525252] hover:border-[#262626]'
             }`}
           >
             {t}
-            {selectedPgTables.includes(t) && <CheckCircle size={18} />}
+            {selectedPgTables.includes(t) && <CheckCircle size={16} className="shrink-0" />}
           </div>
         ))}
       </div>
 
-      {error && <p className="text-xs text-red-400 font-bold px-1 mb-4">{error}</p>}
+      {error && <p className="text-[13px] text-red-400 font-medium px-1 mb-4">{error}</p>}
 
       <Button
         variant="primary"
@@ -291,7 +299,7 @@ export default function ConnectionPanel({ darkMode, sessionId: _sessionId, onCom
         loading={loading}
         disabled={selectedPgTables.length === 0}
         onClick={handleImportMetadata}
-        className="w-full !bg-purple-600 hover:!bg-purple-700 !shadow-purple-600/20"
+        className="w-full"
       >
         {loading ? 'Fetching…' : 'Import Metadata'}
       </Button>

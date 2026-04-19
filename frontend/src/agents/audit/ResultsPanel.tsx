@@ -30,7 +30,6 @@ interface AuditSummary {
 }
 
 interface ResultsPanelProps {
-  darkMode: boolean;
   sessionId: string;
   category: string;
   results: AuditResultItem[];
@@ -41,9 +40,7 @@ const criticalityVariant: Record<string, 'high' | 'medium' | 'low'> = {
   High: 'high', Medium: 'medium', Low: 'low',
 };
 
-export default function ResultsPanel({
-  darkMode, sessionId, category, results, summary,
-}: ResultsPanelProps) {
+export default function ResultsPanel({ sessionId, category, results, summary }: ResultsPanelProps) {
   const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
   const [exporting, setExporting] = useState(false);
   const [sortField, setSortField] = useState<'criticality' | 'status' | 'confidence_score'>('criticality');
@@ -98,18 +95,16 @@ export default function ResultsPanel({
           { label: 'Compliance', value: `${summary.compliance_rate}%`, color: 'text-emerald-500' },
           { label: 'Action items', value: summary.action_items, color: 'text-red-400' },
           { label: 'High priority', value: summary.high_priority_issues, color: 'text-orange-400' },
-          { label: 'Avg confidence', value: `${(summary.average_confidence * 100).toFixed(0)}%`, color: 'text-blue-400' },
+          { label: 'Avg confidence', value: `${(summary.average_confidence * 100).toFixed(0)}%`, color: 'text-amber-400' },
         ].map(({ label, value, color }) => (
           <div
             key={label}
-            className={`rounded-2xl p-4 border text-center ${
-              darkMode ? 'bg-slate-900/40 border-slate-700' : 'bg-slate-50 border-slate-100'
-            }`}
+            className="rounded-[8px] p-4 border border-[#1e1e1e] bg-[#0f0f0f] text-center"
           >
-            <p className={`text-2xl font-black ${color}`}>{value}</p>
-            <p className={`text-[10px] font-bold uppercase tracking-widest mt-1 ${
-              darkMode ? 'text-slate-500' : 'text-slate-400'
-            }`}>{label}</p>
+            <p className={`text-2xl font-bold ${color}`}>{value}</p>
+            <p className="text-[11px] font-semibold uppercase tracking-widest mt-1 text-[#525252]">
+              {label}
+            </p>
           </div>
         ))}
       </div>
@@ -122,7 +117,6 @@ export default function ResultsPanel({
           loading={exporting}
           icon={!exporting ? <Download size={14} /> : undefined}
           onClick={handleExport}
-          className="!bg-blue-600 hover:!bg-blue-700 !shadow-blue-600/20"
         >
           {exporting ? 'Exporting…' : 'Export Excel'}
         </Button>
@@ -131,15 +125,13 @@ export default function ResultsPanel({
       {/* Results table */}
       <div className="space-y-2">
         {/* Sort controls */}
-        <div className={`flex gap-2 px-1 ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+        <div className="flex gap-2 px-1 text-[#525252]">
           {(['criticality', 'status', 'confidence_score'] as const).map((field) => (
             <button
               key={field}
               onClick={() => toggleSort(field)}
-              className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-1 transition-colors ${
-                sortField === field
-                  ? darkMode ? 'text-blue-400' : 'text-blue-600'
-                  : ''
+              className={`text-[11px] font-semibold uppercase tracking-widest flex items-center gap-1 transition-colors ${
+                sortField === field ? 'text-amber-400' : ''
               }`}
             >
               {field === 'confidence_score' ? 'Confidence' : field}
@@ -153,29 +145,17 @@ export default function ResultsPanel({
           return (
             <div
               key={idx}
-              className={`rounded-2xl border overflow-hidden transition-all ${
-                item.requires_action
-                  ? darkMode
-                    ? 'border-red-900/50'
-                    : 'border-red-100'
-                  : darkMode
-                  ? 'border-slate-700'
-                  : 'border-slate-100'
+              className={`rounded-[8px] border overflow-hidden transition-all ${
+                item.requires_action ? 'border-red-900/50' : 'border-[#1e1e1e]'
               }`}
             >
               {/* Row header */}
               <button
                 onClick={() => setExpandedIdx(expanded ? null : idx)}
-                className={`w-full flex items-start gap-3 px-5 py-4 text-left transition-colors ${
-                  darkMode
-                    ? 'bg-slate-800 hover:bg-slate-700/60'
-                    : 'bg-white hover:bg-slate-50'
-                }`}
+                className="w-full flex items-start gap-3 px-5 py-4 text-left transition-colors bg-[#111111] hover:bg-[#131313]"
               >
                 <div className="flex-1 min-w-0 space-y-1">
-                  <p className={`text-xs font-bold leading-snug line-clamp-2 ${
-                    darkMode ? 'text-slate-200' : 'text-slate-800'
-                  }`}>
+                  <p className="text-[13px] font-semibold leading-snug line-clamp-2 text-[#a3a3a3]">
                     {item.rule}
                   </p>
                   <div className="flex flex-wrap items-center gap-2">
@@ -184,7 +164,7 @@ export default function ResultsPanel({
                       {item.criticality}
                     </Badge>
                     {item.page_numbers && item.page_numbers !== 'Not Specified' && (
-                      <span className={`text-[9px] ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+                      <span className="text-[11px] text-[#525252]">
                         p. {item.page_numbers}
                       </span>
                     )}
@@ -192,20 +172,16 @@ export default function ResultsPanel({
                 </div>
                 <div className="shrink-0 mt-0.5">
                   {expanded ? (
-                    <ChevronUp size={14} className={darkMode ? 'text-slate-500' : 'text-slate-400'} />
+                    <ChevronUp size={14} className="text-[#525252]" />
                   ) : (
-                    <ChevronDown size={14} className={darkMode ? 'text-slate-500' : 'text-slate-400'} />
+                    <ChevronDown size={14} className="text-[#525252]" />
                   )}
                 </div>
               </button>
 
               {/* Expanded detail */}
               {expanded && (
-                <div
-                  className={`px-5 pb-5 pt-3 space-y-3 border-t ${
-                    darkMode ? 'border-slate-700 bg-slate-900/40' : 'border-slate-100 bg-slate-50'
-                  }`}
-                >
+                <div className="px-5 pb-5 pt-3 space-y-3 border-t border-[#1e1e1e] bg-[#0f0f0f]">
                   {[
                     { label: 'Observation', text: item.observation },
                     item.recommendation ? { label: 'Recommendation', text: item.recommendation } : null,
@@ -214,14 +190,10 @@ export default function ResultsPanel({
                     .filter(Boolean)
                     .map((section) => (
                       <div key={section!.label}>
-                        <p className={`text-[9px] font-black uppercase tracking-widest mb-1 ${
-                          darkMode ? 'text-slate-500' : 'text-slate-400'
-                        }`}>
+                        <p className="text-[11px] font-semibold uppercase tracking-widest mb-1 text-[#525252]">
                           {section!.label}
                         </p>
-                        <p className={`text-xs leading-relaxed ${
-                          darkMode ? 'text-slate-300' : 'text-slate-700'
-                        }`}>
+                        <p className="text-[13px] leading-relaxed text-[#a3a3a3]">
                           {section!.text}
                         </p>
                       </div>

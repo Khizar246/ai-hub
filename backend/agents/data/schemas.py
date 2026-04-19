@@ -1,6 +1,6 @@
 # Pydantic request/response models for TalkToData Engine — ported from Talk_To_Data_Engine/backend/main.py
 
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel
 
@@ -8,7 +8,7 @@ from pydantic import BaseModel
 class ColumnReview(BaseModel):
     name: str
     data_type: str
-    description: Optional[str] = ""
+    description: str = ""
 
 
 class TableReview(BaseModel):
@@ -22,11 +22,13 @@ class FinalSchemaRequest(BaseModel):
 
 
 class PostgresConfig(BaseModel):
+    db_type: str = "postgresql"  # "postgresql" | "mysql" | "mssql"
     host: str
     port: str
     database: str
     username: str
     password: str
+    ssl_required: bool = False
 
 
 class PostgresMetadataRequest(BaseModel):
@@ -38,7 +40,7 @@ class ExecutionRequest(BaseModel):
     query: str
     dialect: str
     # config is optional — may be stored in session or provided per request
-    config: Optional[PostgresConfig] = None
+    config: PostgresConfig | None = None
 
 
 class AskRequest(BaseModel):
@@ -54,4 +56,4 @@ class AskResponse(BaseModel):
 class ExecutionResponse(BaseModel):
     columns: list[str]
     rows: list[list[Any]]
-    hero_data: Optional[dict[str, Any]] = None
+    hero_data: dict[str, Any] | None = None

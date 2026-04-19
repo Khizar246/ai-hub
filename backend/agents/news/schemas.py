@@ -1,7 +1,5 @@
 # Pydantic models for the News Research Agent
 
-from typing import Optional
-
 from pydantic import BaseModel
 
 
@@ -14,7 +12,7 @@ class ArticleSummary(BaseModel):
     title: str
     word_count: int
     status: str          # "ok" | "skipped" | "error"
-    error: Optional[str] = None
+    error: str | None = None
 
 
 class IngestResponse(BaseModel):

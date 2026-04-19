@@ -1,11 +1,12 @@
 # APIRouter for TalkToData Engine — endpoints ported from Talk_To_Data_Engine/backend/main.py.
 # Session state stored in Redis via session_manager instead of the original global dict.
 
-from typing import Annotated, Optional
+from typing import Annotated
 
 from fastapi import APIRouter, File, Header, HTTPException, Request, UploadFile
 
 from agents.data import db_connector, llm_service, transpiler
+from agents.data.db_connector import get_connector
 from agents.data.schemas import (
     AskRequest,
     ExecutionRequest,
@@ -27,7 +28,7 @@ _DIALECT_KEY = "data:dialect"
 _PG_CONFIG_KEY = "data:pg_config"
 
 
-def _require_session(x_session_id: Optional[str]) -> str:
+def _require_session(x_session_id: str | None) -> str:
     if not x_session_id:
         raise HTTPException(status_code=400, detail="X-Session-ID header is required.")
     return x_session_id
@@ -40,7 +41,7 @@ def _require_session(x_session_id: Optional[str]) -> str:
 @router.post("/parse-excel")
 async def parse_excel(
     file: Annotated[UploadFile, File(...)],
-    x_session_id: Annotated[Optional[str], Header()] = None,
+    x_session_id: Annotated[str | None, Header()] = None,
 ) -> dict:
     """Upload Excel file, write sheets to session SQLite DB, return table metadata."""
     session_id = _require_session(x_session_id)
@@ -60,11 +61,10 @@ async def parse_excel(
 @router.post("/list-postgres-tables")
 async def list_postgres_tables(
     raw_request: Request,
-    x_session_id: Annotated[Optional[str], Header()] = None,
+    x_session_id: Annotated[str | None, Header()] = None,
 ) -> dict:
     """Connect to Postgres and return all public table names."""
     body = await raw_request.json()
-    logger.info(f"list_postgres_tables_raw_body={body}")
     try:
         config = PostgresConfig(**body)
     except Exception as exc:
@@ -72,9 +72,10 @@ async def list_postgres_tables(
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     session_id = _require_session(x_session_id)
     try:
-        tables = db_connector.list_postgres_tables(config)
+        connector = get_connector(config)
+        tables = connector.list_tables()
         await session_manager.set(session_id, _PG_CONFIG_KEY, config.model_dump())
-        await session_manager.set(session_id, _DIALECT_KEY, "postgres")
+        await session_manager.set(session_id, _DIALECT_KEY, config.db_type)
         return {"tables": tables}
     except DatabaseConnectionError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -87,14 +88,23 @@ async def list_postgres_tables(
 @router.post("/fetch-postgres-metadata")
 async def fetch_postgres_metadata(
     request: PostgresMetadataRequest,
-    x_session_id: Annotated[Optional[str], Header()] = None,
+    x_session_id: Annotated[str | None, Header()] = None,
 ) -> dict:
     """Fetch column info for the selected Postgres tables."""
     _require_session(x_session_id)
     try:
-        tables = db_connector.fetch_postgres_metadata(
-            request.config, request.selected_tables
-        )
+        connector = get_connector(request.config)
+        raw = connector.fetch_metadata(request.selected_tables)
+        tables = [
+            {
+                "table_name": item["table"],
+                "columns": [
+                    {"name": c["name"], "data_type": str(c["type"]).upper(), "description": ""}
+                    for c in item["columns"]
+                ],
+            }
+            for item in raw
+        ]
         return {"tables": tables}
     except DatabaseConnectionError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -107,7 +117,7 @@ async def fetch_postgres_metadata(
 @router.post("/finalize-metadata")
 async def finalize_metadata(
     data: FinalSchemaRequest,
-    x_session_id: Annotated[Optional[str], Header()] = None,
+    x_session_id: Annotated[str | None, Header()] = None,
 ) -> dict:
     """Build schema text from reviewed tables and store in session for LLM queries."""
     session_id = _require_session(x_session_id)
@@ -128,7 +138,7 @@ async def finalize_metadata(
 @router.post("/ask")
 async def ask(
     payload: AskRequest,
-    x_session_id: Annotated[Optional[str], Header()] = None,
+    x_session_id: Annotated[str | None, Header()] = None,
 ) -> dict:
     """Generate SQL + explanation for a natural language question."""
     session_id = _require_session(x_session_id)
@@ -141,12 +151,33 @@ async def ask(
             detail="Schema not initialised. Upload data or connect a database first.",
         )
 
+    # For server-connected databases, derive the SQL generation dialect from db_type
+    sql_dialect = dialect
+    dialect_map = {"postgresql": "postgresql", "mysql": "mysql", "mssql": "tsql"}
+    pg_config_data = await session_manager.get(session_id, _PG_CONFIG_KEY)
+    if pg_config_data:
+        pg_cfg = PostgresConfig(**pg_config_data)
+        sql_dialect = dialect_map.get(pg_cfg.db_type, dialect)
+
     try:
-        raw_sql = llm_service.get_sql(schema_text, payload.question, dialect)
-        validated_sql = transpiler.validate_and_format_sql(raw_sql, dialect)
+        # Step 1: Generate SQL
+        raw_sql = llm_service.get_sql(schema_text, payload.question, sql_dialect)
+        cleaned_sql = llm_service.clean_sql_output(raw_sql)
+
+        # Step 2: Silent SQL review — corrects errors internally, users never see this step
+        reviewed_sql = llm_service.review_sql(
+            question=payload.question,
+            schema=schema_text,
+            generated_sql=cleaned_sql,
+            dialect=sql_dialect,
+        )
+
+        # Step 3: SQLGlot structural validation
+        validated_sql = transpiler.validate_and_format_sql(reviewed_sql, dialect)
     except AgentError as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
+    # Step 4: Get explanation
     explanation = llm_service.get_explanation(validated_sql)
     clean_logic = transpiler.clean_explanation(explanation)
 
@@ -160,14 +191,14 @@ async def ask(
 @router.post("/execute")
 async def execute_query(
     req: ExecutionRequest,
-    x_session_id: Annotated[Optional[str], Header()] = None,
+    x_session_id: Annotated[str | None, Header()] = None,
 ) -> dict:
     """Execute SQL against the connected database and return rows + hero card data."""
     session_id = _require_session(x_session_id)
 
     # Resolve Postgres config: prefer request body, fall back to session
     config = req.config
-    if req.dialect == "postgres" and config is None:
+    if req.dialect in ("postgres", "postgresql", "mysql", "mssql") and config is None:
         pg_config_data = await session_manager.get(session_id, _PG_CONFIG_KEY)
         if pg_config_data:
             config = PostgresConfig(**pg_config_data)

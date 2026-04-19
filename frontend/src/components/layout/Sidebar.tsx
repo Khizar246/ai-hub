@@ -1,133 +1,91 @@
-// Agent navigation sidebar: reads agentRegistry, highlights active route.
+// Agent navigation sidebar: text-only nav with amber left-border accent on active item.
 
 import { useState } from 'react';
 import { NavLink, Link, useLocation } from 'react-router-dom';
-import {
-  FileSearch, Newspaper, Database, LayoutDashboard,
-  ChevronLeft, ChevronRight,
-} from 'lucide-react';
+import { FileSearch, Newspaper, Database, LayoutDashboard, User } from 'lucide-react';
 import { agentRegistry } from '../../lib/agentRegistry';
-import { useUIStore } from '../../lib/store';
+import ContactFloat from '../ui/ContactFloat';
 
-const iconMap: Record<string, React.ReactNode> = {
-  FileSearch:  <FileSearch size={16} />,
-  Newspaper:   <Newspaper size={16} />,
-  Database:    <Database size={16} />,
-};
-
-const colorMap: Record<string, string> = {
-  blue:    'bg-blue-600 shadow-blue-600/30',
-  emerald: 'bg-emerald-500 shadow-emerald-500/30',
-  purple:  'bg-purple-600 shadow-purple-600/30',
-};
-
-const activeBorderMap: Record<string, string> = {
-  blue:    'border-blue-600',
-  emerald: 'border-emerald-500',
-  purple:  'border-purple-600',
+const iconMap: Record<string, React.ElementType> = {
+  FileSearch,
+  Newspaper,
+  Database,
 };
 
 export default function Sidebar() {
-  const { darkMode } = useUIStore();
   const location = useLocation();
-  const [collapsed, setCollapsed] = useState(false);
+  const [contactOpen, setContactOpen] = useState(false);
 
-  const width = collapsed ? 'w-[60px]' : 'w-[240px]';
+  const inactiveItem =
+    'flex items-center gap-2.5 px-2 py-1.5 rounded-[4px] text-[14px] font-medium text-[#525252] hover:text-[#a3a3a3] hover:bg-[#111111] transition-colors duration-100 cursor-pointer';
+  const activeItem =
+    'flex items-center gap-2.5 px-[6px] py-1.5 rounded-[4px] text-[14px] font-medium text-[#fafafa] border-l-2 border-amber-400 bg-[#111111]';
 
   return (
-    <aside
-      className={`fixed top-14 left-0 bottom-0 z-40 flex flex-col border-r transition-all duration-200 ${width} ${
-        darkMode
-          ? 'bg-slate-900 border-slate-800'
-          : 'bg-white border-slate-200'
-      }`}
-    >
-      {/* Dashboard link */}
-      <div className="px-3 pt-4 pb-2">
-        <Link
-          to="/"
-          className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold transition-colors ${
-            location.pathname === '/'
-              ? darkMode
-                ? 'bg-slate-800 text-white'
-                : 'bg-slate-100 text-slate-900'
-              : darkMode
-              ? 'text-slate-500 hover:text-slate-300 hover:bg-slate-800'
-              : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
-          }`}
-        >
-          <LayoutDashboard size={16} className="shrink-0" />
-          {!collapsed && <span>Dashboard</span>}
-        </Link>
-      </div>
+    <>
+      <aside className="w-[220px] h-full bg-[#0a0a0a] border-r border-[#1a1a1a] flex flex-col shrink-0">
+        {/* Logo section */}
+        <div className="h-12 border-b border-[#1a1a1a] px-5 flex items-center shrink-0">
+          <div className="w-5 h-5 bg-amber-400 rounded-sm flex items-center justify-center text-black text-xs font-bold shrink-0">
+            A
+          </div>
+          <span className="ml-2.5 text-[14px] font-semibold text-[#fafafa]">AI Hub</span>
+        </div>
 
-      <div className={`px-3 mb-2 ${!collapsed ? '' : 'hidden'}`}>
-        <p className={`text-[9px] font-black uppercase tracking-widest px-3 ${
-          darkMode ? 'text-slate-600' : 'text-slate-400'
-        }`}>
-          Agents
-        </p>
-      </div>
+        {/* Nav section */}
+        <div className="flex-1 px-3 pt-4 overflow-y-auto">
+          {/* Dashboard */}
+          <p className="text-[11px] font-semibold tracking-[0.1em] uppercase text-[#525252] px-2 mb-1">
+            General
+          </p>
+          <Link
+            to="/"
+            className={location.pathname === '/' ? activeItem : inactiveItem}
+          >
+            <LayoutDashboard size={14} className="shrink-0" />
+            Dashboard
+          </Link>
 
-      {/* Agent nav items */}
-      <nav className="flex-1 px-3 space-y-1 overflow-y-auto">
-        {agentRegistry.map((agent) => {
-          const isActive = location.pathname.startsWith(`/agent/${agent.id}`);
-          return (
-            <NavLink
-              key={agent.id}
-              to={agent.route}
-              className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold transition-all border ${
-                isActive
-                  ? darkMode
-                    ? `bg-slate-800 text-white border-l-2 ${activeBorderMap[agent.color]} border-t-0 border-r-0 border-b-0`
-                    : `bg-slate-50 text-slate-900 border-l-2 ${activeBorderMap[agent.color]} border-t-0 border-r-0 border-b-0`
-                  : `border-transparent ${
-                      darkMode
-                        ? 'text-slate-500 hover:text-slate-300 hover:bg-slate-800'
-                        : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
-                    }`
-              }`}
-            >
-              <div
-                className={`w-6 h-6 rounded-lg flex items-center justify-center text-white shrink-0 shadow-md ${
-                  colorMap[agent.color] ?? 'bg-slate-500'
-                }`}
-              >
-                {iconMap[agent.icon] ?? <Database size={14} />}
-              </div>
-
-              {!collapsed && (
-                <div className="flex-1 min-w-0">
-                  <p className="truncate leading-none">{agent.name}</p>
+          {/* Agents */}
+          <p className="text-[11px] font-semibold tracking-[0.1em] uppercase text-[#525252] px-2 mb-1 mt-5">
+            Agents
+          </p>
+          <nav className="space-y-0.5">
+            {agentRegistry.map((agent) => {
+              const isActive = location.pathname.startsWith(`/agent/${agent.id}`);
+              const Icon = iconMap[agent.icon] ?? Database;
+              return (
+                <NavLink
+                  key={agent.id}
+                  to={agent.route}
+                  className={isActive ? activeItem : inactiveItem}
+                >
+                  <Icon size={14} className="shrink-0" />
+                  <span className="truncate">{agent.name}</span>
                   {agent.status === 'coming-soon' && (
-                    <span className={`text-[8px] font-black uppercase tracking-widest ${
-                      darkMode ? 'text-slate-600' : 'text-slate-400'
-                    }`}>
-                      coming soon
+                    <span className="ml-auto text-[10px] font-medium text-[#525252] tracking-wide">
+                      soon
                     </span>
                   )}
-                </div>
-              )}
-            </NavLink>
-          );
-        })}
-      </nav>
+                </NavLink>
+              );
+            })}
+          </nav>
+        </div>
 
-      {/* Collapse toggle */}
-      <div className="px-3 py-4 border-t border-inherit">
-        <button
-          onClick={() => setCollapsed(!collapsed)}
-          className={`w-full flex items-center justify-center p-2 rounded-xl transition-colors ${
-            darkMode
-              ? 'text-slate-600 hover:text-slate-400 hover:bg-slate-800'
-              : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'
-          }`}
-          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        >
-          {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
-        </button>
-      </div>
-    </aside>
+        {/* About Me */}
+        <div className="border-t border-[#1a1a1a] p-3 shrink-0">
+          <button
+            onClick={() => setContactOpen((v) => !v)}
+            className={`w-full ${contactOpen ? activeItem : inactiveItem}`}
+          >
+            <User size={14} className="shrink-0" />
+            About Me
+          </button>
+        </div>
+      </aside>
+
+      <ContactFloat open={contactOpen} onClose={() => setContactOpen(false)} />
+    </>
   );
 }

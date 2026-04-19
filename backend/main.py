@@ -6,7 +6,6 @@ from collections.abc import AsyncGenerator
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from core.config import settings
 from core.exceptions import register_exception_handlers
 from core.logger import get_logger
 from core.session_manager import session_manager

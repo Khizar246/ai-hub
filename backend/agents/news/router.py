@@ -1,7 +1,7 @@
 # APIRouter for News Research Agent — POST /ingest, /ask, GET /history, DELETE /clear
 
 import asyncio
-from typing import Annotated, Optional
+from typing import Annotated
 
 from fastapi import APIRouter, Header, HTTPException
 
@@ -30,7 +30,7 @@ _URLS_KEY = "news:processed_urls"
 _HISTORY_KEY = "news:chat_history"
 
 
-def _require_session(x_session_id: Optional[str]) -> str:
+def _require_session(x_session_id: str | None) -> str:
     if not x_session_id:
         raise HTTPException(status_code=400, detail="X-Session-ID header is required.")
     return x_session_id
@@ -43,7 +43,7 @@ def _require_session(x_session_id: Optional[str]) -> str:
 @router.post("/ingest", response_model=IngestResponse)
 async def ingest(
     request: IngestRequest,
-    x_session_id: Annotated[Optional[str], Header()] = None,
+    x_session_id: Annotated[str | None, Header()] = None,
 ) -> IngestResponse:
     """
     Scrape each URL with Crawl4AI, embed only new URLs (URL-based caching),
@@ -110,7 +110,7 @@ async def ingest(
 @router.post("/ask", response_model=AnswerResponse)
 async def ask(
     request: QuestionRequest,
-    x_session_id: Annotated[Optional[str], Header()] = None,
+    x_session_id: Annotated[str | None, Header()] = None,
 ) -> AnswerResponse:
     """
     Run the LangGraph retrieve → generate pipeline for one conversational turn.

@@ -1,27 +1,17 @@
-// Generic agent page: header + collapsible how-it-works + instructions + agent UI.
+// Generic agent page: header + collapsible accordions + agent UI.
 
 import { useState } from 'react';
 import { useParams, Navigate } from 'react-router-dom';
-import {
-  FileSearch, Newspaper, Database,
-  ChevronDown, ChevronUp, Info, BookOpen,
-} from 'lucide-react';
+import { FileSearch, Newspaper, Database, ChevronDown, ChevronUp, Info, BookOpen } from 'lucide-react';
 import { getAgent } from '../lib/agentRegistry';
-import { useUIStore } from '../lib/store';
 import AuditAgent from '../agents/audit/AuditAgent';
 import NewsAgent from '../agents/news/NewsAgent';
 import DataAgent from '../agents/data/DataAgent';
 
-const iconMap: Record<string, React.ReactNode> = {
-  FileSearch: <FileSearch size={20} />,
-  Newspaper:  <Newspaper size={20} />,
-  Database:   <Database size={20} />,
-};
-
-const agentColorMap: Record<string, { icon: string; accent: string }> = {
-  blue:    { icon: 'bg-blue-600 shadow-blue-600/30',    accent: 'text-blue-500' },
-  emerald: { icon: 'bg-emerald-500 shadow-emerald-500/30', accent: 'text-emerald-500' },
-  purple:  { icon: 'bg-purple-600 shadow-purple-600/30',  accent: 'text-purple-500' },
+const iconMap: Record<string, React.ElementType> = {
+  FileSearch,
+  Newspaper,
+  Database,
 };
 
 const agentComponents: Record<string, React.ReactNode> = {
@@ -34,53 +24,32 @@ function Accordion({
   title,
   icon,
   children,
-  darkMode,
 }: {
   title: string;
   icon: React.ReactNode;
   children: React.ReactNode;
-  darkMode: boolean;
 }) {
   const [open, setOpen] = useState(false);
 
   return (
-    <div
-      className={`rounded-2xl border overflow-hidden ${
-        darkMode ? 'border-slate-700' : 'border-slate-200'
-      }`}
-    >
+    <div className="border border-[#1e1e1e] bg-[#111111] rounded-[8px] mb-2 overflow-hidden">
       <button
         onClick={() => setOpen(!open)}
-        className={`w-full flex items-center justify-between px-5 py-4 text-left transition-colors ${
-          darkMode
-            ? 'bg-slate-800 hover:bg-slate-700'
-            : 'bg-white hover:bg-slate-50'
-        }`}
+        className="w-full px-5 py-3.5 text-[14px] font-medium text-[#a3a3a3] hover:text-[#fafafa] flex items-center justify-between cursor-pointer transition-colors duration-100"
       >
-        <div className="flex items-center gap-2">
-          <span className={darkMode ? 'text-slate-400' : 'text-slate-500'}>{icon}</span>
-          <span
-            className={`text-sm font-black ${darkMode ? 'text-slate-200' : 'text-slate-800'}`}
-          >
-            {title}
-          </span>
-        </div>
-        {open ? (
-          <ChevronUp size={14} className={darkMode ? 'text-slate-500' : 'text-slate-400'} />
-        ) : (
-          <ChevronDown size={14} className={darkMode ? 'text-slate-500' : 'text-slate-400'} />
-        )}
+        <span className="flex items-center gap-2">
+          <span className="text-[#525252]">{icon}</span>
+          {title}
+        </span>
+        {open
+          ? <ChevronUp size={13} className="text-[#525252]" />
+          : <ChevronDown size={13} className="text-[#525252]" />
+        }
       </button>
 
       {open && (
-        <div
-          className={`px-5 pb-5 pt-3 border-t text-sm leading-relaxed ${
-            darkMode
-              ? 'border-slate-700 bg-slate-900/40 text-slate-400'
-              : 'border-slate-100 bg-slate-50 text-slate-600'
-          }`}
-        >
-          {children}
+        <div className="px-5 pb-4 text-[14px] text-[#525252] leading-relaxed border-t border-[#1e1e1e]">
+          <div className="pt-3">{children}</div>
         </div>
       )}
     </div>
@@ -89,88 +58,52 @@ function Accordion({
 
 export default function AgentPage() {
   const { agentId } = useParams<{ agentId: string }>();
-  const { darkMode } = useUIStore();
 
   const agent = agentId ? getAgent(agentId) : undefined;
   if (!agent) return <Navigate to="/" replace />;
 
-  const colors = agentColorMap[agent.color] ?? agentColorMap.blue;
+  const Icon = iconMap[agent.icon] ?? Database;
   const component = agentComponents[agent.id];
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6 pb-16">
-      {/* Agent header card */}
-      <div
-        className={`rounded-[2rem] border p-8 flex items-start gap-5 ${
-          darkMode
-            ? 'bg-slate-800 border-slate-700'
-            : 'bg-white border-slate-200'
-        }`}
-      >
-        <div
-          className={`w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-lg shrink-0 ${colors.icon}`}
-        >
-          {iconMap[agent.icon] ?? <Database size={20} />}
-        </div>
-        <div className="space-y-1 min-w-0">
-          <h1
-            className={`text-2xl font-black tracking-tight ${
-              darkMode ? 'text-white' : 'text-slate-900'
-            }`}
-          >
-            {agent.name}
-          </h1>
-          <p
-            className={`text-sm leading-relaxed ${
-              darkMode ? 'text-slate-400' : 'text-slate-600'
-            }`}
-          >
-            {agent.description}
-          </p>
-          <div className="flex flex-wrap gap-1.5 pt-1">
-            {agent.tags.map((tag) => (
-              <span
-                key={tag}
-                className={`text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border ${
-                  darkMode
-                    ? 'border-slate-700 text-slate-500'
-                    : 'border-slate-200 text-slate-400'
-                }`}
-              >
-                {tag}
-              </span>
-            ))}
-          </div>
-        </div>
+    <div className="max-w-[1000px] mx-auto pb-16">
+      {/* Page header */}
+      <div className="flex items-center gap-3 mb-6">
+        <Icon size={18} className="text-[#525252] shrink-0" />
+        <h1 className="text-[26px] font-semibold text-[#fafafa] tracking-tight">
+          {agent.name}
+        </h1>
       </div>
 
-      {/* Collapsible info accordions */}
-      <div className="space-y-2">
-        <Accordion
-          title="How it works"
-          icon={<Info size={14} />}
-          darkMode={darkMode}
-        >
+      {/* Tags */}
+      <div className="flex flex-wrap gap-1.5 mb-6">
+        {agent.tags.map((tag) => (
+          <span
+            key={tag}
+            className="font-mono bg-[#0f0f0f] border border-[#1e1e1e] text-[#525252] text-[11px] px-2 py-0.5 rounded-[3px]"
+          >
+            {tag}
+          </span>
+        ))}
+      </div>
+
+      {/* Accordions */}
+      <div className="mb-6">
+        <Accordion title="How it works" icon={<Info size={13} />}>
           {agent.howItWorks}
         </Accordion>
-        <Accordion
-          title="Instructions"
-          icon={<BookOpen size={14} />}
-          darkMode={darkMode}
-        >
-          <ol className="space-y-2 list-none">
+        <Accordion title="Instructions" icon={<BookOpen size={13} />}>
+          <ol className="space-y-4 list-none pt-1">
             {agent.instructions.split('. Step ').map((step, i) => {
               const text = i === 0 ? step.replace(/^Step \d+: /, '') : step.replace(/^\d+: /, '');
               return (
-                <li key={i} className="flex gap-2">
-                  <span
-                    className={`text-[9px] font-black uppercase tracking-widest mt-0.5 shrink-0 w-4 ${
-                      colors.accent
-                    }`}
-                  >
+                <li key={i} className="flex gap-3 items-start">
+                  <span className="w-6 h-6 rounded-full bg-amber-400 text-[#0a0a0a] text-[12px] font-bold flex items-center justify-center shrink-0 mt-0.5">
                     {i + 1}
                   </span>
-                  <span>{text.replace(/\.$/, '')}</span>
+                  <span className="text-[14px] text-[#525252] leading-relaxed pt-0.5">
+                    {text.replace(/\.$/, '')}
+                  </span>
                 </li>
               );
             })}
@@ -179,17 +112,11 @@ export default function AgentPage() {
       </div>
 
       {/* Agent interactive component */}
-      <div>
-        {component ?? (
-          <div
-            className={`rounded-[2rem] border border-dashed flex items-center justify-center py-20 ${
-              darkMode ? 'border-slate-700 text-slate-600' : 'border-slate-200 text-slate-400'
-            }`}
-          >
-            <p className="text-sm font-bold">Agent UI coming soon</p>
-          </div>
-        )}
-      </div>
+      {component ?? (
+        <div className="border border-[#1e1e1e] bg-[#111111] rounded-[10px] flex items-center justify-center py-20">
+          <p className="text-[14px] text-[#525252]">Agent UI coming soon</p>
+        </div>
+      )}
     </div>
   );
 }

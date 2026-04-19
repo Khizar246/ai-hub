@@ -21,7 +21,6 @@ interface TableReview {
 }
 
 interface SchemaEditorProps {
-  darkMode: boolean;
   sessionId: string;
   tables: TableReview[];
   dialect: string;
@@ -30,7 +29,6 @@ interface SchemaEditorProps {
 }
 
 export default function SchemaEditor({
-  darkMode,
   sessionId: _sessionId,
   tables,
   dialect,
@@ -69,16 +67,12 @@ export default function SchemaEditor({
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8">
+    <div className="max-w-6xl mx-auto space-y-6">
       {/* Header bar */}
-      <div
-        className={`p-8 rounded-[2rem] border flex justify-between items-center shadow-sm ${
-          darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'
-        }`}
-      >
+      <div className="p-6 rounded-[8px] border border-[#1e1e1e] bg-[#111111] flex justify-between items-center">
         <div>
-          <h2 className="text-xl font-black">Verify Schema Mapping</h2>
-          <p className="text-slate-400 text-xs font-medium uppercase tracking-widest mt-1">
+          <h2 className="text-[18px] font-semibold text-[#fafafa]">Verify Schema Mapping</h2>
+          <p className="text-[#525252] text-[12px] font-medium uppercase tracking-widest mt-1">
             Reviewing {tables.length} Table{tables.length !== 1 ? 's' : ''}
           </p>
         </div>
@@ -87,57 +81,42 @@ export default function SchemaEditor({
           size="md"
           icon={<ChevronRight size={16} />}
           onClick={handleStartAnalysis}
-          className="!bg-purple-600 hover:!bg-purple-700 !shadow-purple-600/20"
         >
           Start Analysis
         </Button>
       </div>
 
       {/* Table cards */}
-      <div className="grid grid-cols-1 gap-6">
+      <div className="grid grid-cols-1 gap-4">
         {tables.map((table, tIdx) => (
           <div
             key={tIdx}
-            className={`p-10 rounded-[3.5rem] border shadow-sm ${
-              darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'
-            }`}
+            className="p-6 rounded-[8px] border border-[#1e1e1e] bg-[#111111]"
           >
             {/* Table name row */}
-            <div
-              className={`flex items-center gap-3 mb-8 border-b pb-4 ${
-                darkMode ? 'border-slate-700' : 'border-slate-100'
-              }`}
-            >
-              <TableIcon className="text-purple-600" size={20} />
+            <div className="flex items-center gap-3 mb-6 border-b border-[#1e1e1e] pb-3">
+              <TableIcon className="text-amber-400 shrink-0" size={16} />
               <input
-                className="text-lg font-black bg-transparent outline-none w-full"
+                className="text-[16px] font-semibold bg-transparent outline-none w-full text-[#fafafa]"
                 value={table.table_name}
                 onChange={(e) => updateTableName(tIdx, e.target.value)}
               />
             </div>
 
             {/* Column rows */}
-            <div className="space-y-3">
+            <div className="space-y-2">
               {table.columns.map((col, cIdx) => (
                 <div
                   key={cIdx}
-                  className={`flex gap-4 items-center p-3 rounded-2xl border transition-all ${
-                    darkMode
-                      ? 'bg-slate-900/50 border-transparent hover:border-slate-600'
-                      : 'bg-slate-50 border-transparent hover:border-slate-200'
-                  }`}
+                  className="flex gap-4 items-center p-3 rounded-[6px] border border-transparent bg-[#0f0f0f] transition-all hover:border-[#262626]"
                 >
                   <input
-                    className="flex-1 font-bold text-sm bg-transparent outline-none px-2"
+                    className="flex-1 font-medium text-[14px] bg-transparent outline-none px-2 text-[#a3a3a3]"
                     value={col.name}
                     onChange={(e) => updateColumn(tIdx, cIdx, 'name', e.target.value)}
                   />
                   <select
-                    className={`px-4 py-2 rounded-xl text-[11px] font-black outline-none ${
-                      darkMode
-                        ? 'bg-slate-800 border-slate-700 text-slate-300'
-                        : 'bg-white border border-slate-200 text-slate-600'
-                    }`}
+                    className="px-3 py-1.5 rounded-[6px] text-[12px] font-medium outline-none bg-[#111111] border border-[#262626] text-[#a3a3a3]"
                     value={col.data_type}
                     onChange={(e) => updateColumn(tIdx, cIdx, 'data_type', e.target.value)}
                   >
@@ -146,9 +125,7 @@ export default function SchemaEditor({
                     ))}
                   </select>
                   <input
-                    className={`flex-1 text-xs italic text-slate-400 bg-transparent outline-none border-l pl-4 ${
-                      darkMode ? 'border-slate-700' : 'border-slate-200'
-                    }`}
+                    className="flex-1 text-[13px] italic text-[#525252] bg-transparent outline-none border-l border-[#262626] pl-3"
                     placeholder="Description…"
                     value={col.description}
                     onChange={(e) => updateColumn(tIdx, cIdx, 'description', e.target.value)}

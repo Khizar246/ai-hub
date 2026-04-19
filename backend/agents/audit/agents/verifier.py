@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from typing import Any, Dict, List
+from typing import Any
 
 from core.logger import get_logger
 
@@ -84,7 +84,7 @@ def _normalize_status(status_text: str) -> str:
         return "Unclear"
 
 
-def _validate_status_consistency(result: Dict[str, Any]) -> Dict[str, Any]:
+def _validate_status_consistency(result: dict[str, Any]) -> dict[str, Any]:
     """Validate that status is consistent with observation content."""
     observation = result.get("observation", "").lower()
     current_status = result.get("status", "")
@@ -108,8 +108,8 @@ def _validate_status_consistency(result: Dict[str, Any]) -> Dict[str, Any]:
 class AuditResultVerifier:
     """Handles verification and parsing of audit results."""
 
-    def parse_audit_result(self, audit_result: str, rule: str) -> Dict[str, Any]:
-        result: Dict[str, Any] = {
+    def parse_audit_result(self, audit_result: str, rule: str) -> dict[str, Any]:
+        result: dict[str, Any] = {
             "rule": rule,
             "status": "Not Analyzed",
             "observation": "",
@@ -133,8 +133,8 @@ class AuditResultVerifier:
         return result
 
     def _extract_audit_fields(
-        self, audit_result: str, result: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, audit_result: str, result: dict[str, Any]
+    ) -> dict[str, Any]:
         lines = audit_result.split("\n")
         current_key: str | None = None
 
@@ -182,21 +182,21 @@ class AuditResultVerifier:
             return 0.0
 
     def _validate_and_clean_result(
-        self, result: Dict[str, Any], audit_result: str
-    ) -> Dict[str, Any]:
+        self, result: dict[str, Any], audit_result: str
+    ) -> dict[str, Any]:
         result["observation"] = _clean_observation_text(result["observation"])
         if not result["page_numbers"] or result["page_numbers"] == "Not Specified":
             result["page_numbers"] = _extract_page_numbers_from_content(audit_result)
         result = _validate_status_consistency(result)
         return result
 
-    def _determine_action_requirements(self, result: Dict[str, Any]) -> Dict[str, Any]:
+    def _determine_action_requirements(self, result: dict[str, Any]) -> dict[str, Any]:
         result["requires_action"] = result["status"] in [
             "Not Present", "Partially Present", "Inadequate", "Error"
         ]
         return result
 
-    def validate_result_completeness(self, result: Dict[str, Any]) -> Dict[str, Any]:
+    def validate_result_completeness(self, result: dict[str, Any]) -> dict[str, Any]:
         required_fields = [
             "rule", "status", "observation", "recommendation",
             "risk", "page_numbers", "confidence_score", "criticality",
@@ -211,11 +211,11 @@ class AuditResultVerifier:
                     result[field] = ""
         return result
 
-    def get_result_summary(self, results: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def get_result_summary(self, results: list[dict[str, Any]]) -> dict[str, Any]:
         if not results:
             return {"error": "No results to summarize"}
         total_rules = len(results)
-        status_counts: Dict[str, int] = {}
+        status_counts: dict[str, int] = {}
         for status in ["Present", "Partially Present", "Inadequate", "Not Present", "Unclear", "Error"]:
             status_counts[status] = sum(1 for r in results if r.get("status") == status)
         action_items = sum(1 for r in results if r.get("requires_action", False))

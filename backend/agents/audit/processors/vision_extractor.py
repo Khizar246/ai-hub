@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+
 from agents.audit.processors.pdf_extractor import PageResult
 from core.llm_client import call_claude_vision
 from core.logger import get_logger
@@ -27,8 +29,6 @@ async def extract_vision_pages(pages: list[PageResult]) -> list[PageResult]:
     Returns the same list with vision_text merged into the .text field.
     Non-vision pages are returned unchanged.
     """
-    import asyncio
-
     updated: list[PageResult] = []
 
     for page in pages:

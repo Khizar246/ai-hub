@@ -3,7 +3,6 @@
 
 import shutil
 from pathlib import Path
-from typing import Optional
 
 import voyageai
 from langchain_community.vectorstores import FAISS
@@ -51,7 +50,7 @@ def _store_dir(session_id: str) -> Path:
     return path
 
 
-def load_vectorstore(session_id: str) -> Optional[FAISS]:
+def load_vectorstore(session_id: str) -> FAISS | None:
     """Load the FAISS index from disk; returns None if not yet created."""
     store_dir = _store_dir(session_id)
     if not (store_dir / "index.faiss").exists():
@@ -86,7 +85,7 @@ def embed_articles(
     session_id: str,
     articles: list[dict],
     already_processed_urls: set[str],
-) -> tuple[Optional[FAISS], list[str]]:
+) -> tuple[FAISS | None, list[str]]:
     """
     Embed new articles into the session FAISS store.
 

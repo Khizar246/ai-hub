@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import asyncio
 import io
-import json
+import os
+import tempfile
 from pathlib import Path
 
 import openpyxl
+from openpyxl.styles import Alignment, Font, PatternFill
 from fastapi import APIRouter, Header, HTTPException, UploadFile, File
 from fastapi.responses import StreamingResponse
 
@@ -24,7 +26,6 @@ from agents.audit.schemas import (
     AuditResponse,
     AuditResultItem,
     AuditSummary,
-    DynamicAuditRequest,
     ExportRequest,
     QuestionValidationResponse,
 )
@@ -114,8 +115,6 @@ async def upload_questions(
         raise HTTPException(status_code=422, detail="Only CSV files are accepted for questions.")
 
     contents = await file.read()
-
-    import os, tempfile
 
     with tempfile.NamedTemporaryFile(delete=False, suffix=".csv") as tmp:
         tmp.write(contents)
@@ -312,7 +311,6 @@ async def export_results(req: ExportRequest):
     ]
     ws.append(headers)
 
-    from openpyxl.styles import Font, PatternFill, Alignment
     header_fill = PatternFill(start_color="1E293B", end_color="1E293B", fill_type="solid")
     header_font = Font(color="FFFFFF", bold=True)
     for cell in ws[1]:

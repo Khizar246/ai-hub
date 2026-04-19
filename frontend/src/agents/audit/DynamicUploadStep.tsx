@@ -46,7 +46,6 @@ export interface ProcessResult {
 }
 
 interface DynamicUploadStepProps {
-  darkMode: boolean;
   sessionId: string;
   onProcessed: (result: ProcessResult) => void;
 }
@@ -88,7 +87,7 @@ function getFileType(filename: string): FileTypeKey | null {
 
 function FileTypeIcon({ filename, size = 16 }: { filename: string; size?: number }) {
   const key = getFileType(filename);
-  if (!key) return <FileText size={size} className="text-slate-400 shrink-0" />;
+  if (!key) return <FileText size={size} className="text-[#525252] shrink-0" />;
   const { Icon, color } = FILE_TYPE_CONFIG[key];
   return <Icon size={size} className={`${color} shrink-0`} />;
 }
@@ -103,14 +102,12 @@ function DropZone({
   accept,
   onDropFiles,
   disabled,
-  darkMode,
 }: {
   label: string;
   hint: string;
   accept: Record<string, string[]>;
   onDropFiles: (files: File[]) => void;
   disabled: boolean;
-  darkMode: boolean;
 }) {
   const onDrop = useCallback((accepted: File[]) => onDropFiles(accepted), [onDropFiles]);
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -124,38 +121,24 @@ function DropZone({
     <div
       {...getRootProps()}
       className={[
-        'rounded-2xl border-2 border-dashed p-6 flex flex-col items-center gap-2 cursor-pointer transition-all',
+        'rounded-[8px] border-2 border-dashed p-6 flex flex-col items-center gap-2 cursor-pointer transition-all',
         isDragActive
-          ? darkMode
-            ? 'border-blue-500 bg-blue-900/10'
-            : 'border-blue-400 bg-blue-50'
-          : darkMode
-          ? 'border-slate-700 hover:border-slate-500'
-          : 'border-slate-200 hover:border-slate-300',
+          ? 'border-amber-400 bg-amber-400/5'
+          : 'border-[#262626] hover:border-[#404040]',
         disabled ? 'opacity-50 cursor-not-allowed' : '',
       ].join(' ')}
     >
       <input {...getInputProps()} />
-      <div
-        className={`p-2.5 rounded-xl ${
-          isDragActive
-            ? 'bg-blue-100 dark:bg-blue-900/30'
-            : darkMode
-            ? 'bg-slate-800'
-            : 'bg-slate-100'
-        }`}
-      >
+      <div className={`p-2.5 rounded-[8px] ${isDragActive ? 'bg-amber-400/10' : 'bg-[#1a1a1a]'}`}>
         <Upload
           size={22}
-          className={isDragActive ? 'text-blue-500' : darkMode ? 'text-slate-400' : 'text-slate-500'}
+          className={isDragActive ? 'text-amber-400' : 'text-[#525252]'}
         />
       </div>
-      <p className={`text-xs font-black text-center ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+      <p className="text-[13px] font-semibold text-center text-[#a3a3a3]">
         {isDragActive ? 'Drop here' : label}
       </p>
-      <p className={`text-[10px] text-center ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
-        {hint}
-      </p>
+      <p className="text-[11px] text-center text-[#525252]">{hint}</p>
     </div>
   );
 }
@@ -165,7 +148,6 @@ function DropZone({
 // ---------------------------------------------------------------------------
 
 export default function DynamicUploadStep({
-  darkMode,
   sessionId,
   onProcessed,
 }: DynamicUploadStepProps) {
@@ -179,14 +161,12 @@ export default function DynamicUploadStep({
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
-  // --- Document drop (single file — take first, ignore rest) ---
   const handleDocDrop = (dropped: File[]) => {
     if (dropped.length > 0) setDocFile(dropped[0]);
   };
 
   const clearDoc = () => setDocFile(null);
 
-  // --- Questions CSV drop: immediate validation ---
   const handleQuestionsDrop = async (dropped: File[]) => {
     const file = dropped[0];
     if (!file) return;
@@ -216,7 +196,6 @@ export default function DynamicUploadStep({
     setValidation(null);
   };
 
-  // --- Process ---
   const canProcess = docFile !== null && validation?.valid === true && phase === 'idle';
 
   const handleProcess = async () => {
@@ -226,7 +205,6 @@ export default function DynamicUploadStep({
     setProgress(15);
 
     try {
-      // 1. Upload document
       const formData = new FormData();
       formData.append('files', docFile);
 
@@ -238,7 +216,6 @@ export default function DynamicUploadStep({
       });
       setProgress(40);
 
-      // 2. Extract + embed
       setPhase('processing');
       setProgress(60);
 
@@ -263,7 +240,6 @@ export default function DynamicUploadStep({
   const phaseLabel =
     phase === 'uploading' ? 'Uploading document…' : 'Extracting & embedding content…';
 
-  // File type label for the loaded card (e.g. "PDF document loaded")
   const docTypeLabel = docFile
     ? (getFileType(docFile.name)
         ? FILE_TYPE_CONFIG[getFileType(docFile.name)!].label
@@ -272,12 +248,33 @@ export default function DynamicUploadStep({
 
   return (
     <div className="space-y-6">
+      {/* Sample data banner */}
+      <div className="flex flex-wrap items-center gap-3 px-4 py-3 rounded-[8px] border border-amber-400/20 bg-amber-400/5 text-[13px] text-[#a3a3a3]">
+        <span>💡 Don't have files? Download our sample document and questions to try the agent instantly.</span>
+        <div className="flex gap-2 shrink-0">
+          <a
+            href="/samples/sample_audit_document.docx"
+            download="sample_audit_document.docx"
+            className="px-3 py-1 rounded-[6px] font-medium border border-amber-400/30 text-amber-400 hover:bg-amber-400/10 transition-colors text-[12px]"
+          >
+            Download Sample Document
+          </a>
+          <a
+            href="/samples/sample_audit_questions.csv"
+            download="sample_audit_questions.csv"
+            className="px-3 py-1 rounded-[6px] font-medium border border-amber-400/30 text-amber-400 hover:bg-amber-400/10 transition-colors text-[12px]"
+          >
+            Download Sample Questions
+          </a>
+        </div>
+      </div>
+
       {/* Two sections side-by-side */}
       <div className="grid grid-cols-2 gap-4">
 
         {/* Left — Document */}
         <div className="space-y-3">
-          <p className={`text-[10px] font-black uppercase tracking-widest ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-[#525252]">
             Upload Document
           </p>
 
@@ -288,30 +285,19 @@ export default function DynamicUploadStep({
               accept={DOC_ACCEPT}
               onDropFiles={handleDocDrop}
               disabled={isLoading}
-              darkMode={darkMode}
             />
           ) : (
-            <div
-              className={`rounded-2xl border p-4 space-y-3 ${
-                darkMode
-                  ? 'bg-emerald-900/20 border-emerald-800'
-                  : 'bg-emerald-50 border-emerald-200'
-              }`}
-            >
+            <div className="rounded-[8px] border border-emerald-500/30 bg-emerald-500/10 p-4 space-y-3">
               {/* File row */}
               <div className="flex items-center gap-2">
                 <FileTypeIcon filename={docFile.name} size={14} />
-                <p className={`text-[11px] font-bold flex-1 truncate ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>
+                <p className="text-[12px] font-semibold flex-1 truncate text-[#a3a3a3]">
                   {docFile.name}
                 </p>
                 {!isLoading && (
                   <button
                     onClick={clearDoc}
-                    className={`p-1 rounded-lg transition-colors ${
-                      darkMode
-                        ? 'text-slate-600 hover:text-red-400 hover:bg-slate-700'
-                        : 'text-slate-400 hover:text-red-500 hover:bg-red-50'
-                    }`}
+                    className="p-1 rounded-[4px] transition-colors text-[#525252] hover:text-red-400 hover:bg-[#1a1a1a]"
                   >
                     <X size={11} />
                   </button>
@@ -321,9 +307,7 @@ export default function DynamicUploadStep({
               {/* Status */}
               <div className="flex items-center gap-2">
                 <CheckCircle2 size={13} className="text-emerald-500 shrink-0" />
-                <span className={`text-[11px] font-black ${darkMode ? 'text-emerald-400' : 'text-emerald-600'}`}>
-                  {docTypeLabel}
-                </span>
+                <span className="text-[12px] font-semibold text-emerald-400">{docTypeLabel}</span>
               </div>
             </div>
           )}
@@ -331,7 +315,7 @@ export default function DynamicUploadStep({
 
         {/* Right — Questions CSV */}
         <div className="space-y-3">
-          <p className={`text-[10px] font-black uppercase tracking-widest ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-[#525252]">
             Audit Questions (CSV)
           </p>
 
@@ -342,38 +326,27 @@ export default function DynamicUploadStep({
               accept={{ 'text/csv': ['.csv'], 'application/csv': ['.csv'] }}
               onDropFiles={handleQuestionsDrop}
               disabled={isLoading}
-              darkMode={darkMode}
             />
           ) : (
             <div
-              className={`rounded-2xl border p-4 space-y-3 ${
+              className={`rounded-[8px] border p-4 space-y-3 ${
                 validation?.valid
-                  ? darkMode
-                    ? 'bg-emerald-900/20 border-emerald-800'
-                    : 'bg-emerald-50 border-emerald-200'
+                  ? 'bg-emerald-500/10 border-emerald-500/30'
                   : validation && !validation.valid
-                  ? darkMode
-                    ? 'bg-red-900/20 border-red-800'
-                    : 'bg-red-50 border-red-200'
-                  : darkMode
-                  ? 'bg-slate-800 border-slate-700'
-                  : 'bg-slate-50 border-slate-200'
+                  ? 'bg-red-500/10 border-red-500/30'
+                  : 'bg-[#0f0f0f] border-[#1e1e1e]'
               }`}
             >
               {/* File row */}
               <div className="flex items-center gap-2">
                 <AlignLeft size={14} className="text-emerald-400 shrink-0" />
-                <p className={`text-[11px] font-bold flex-1 truncate ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>
+                <p className="text-[12px] font-semibold flex-1 truncate text-[#a3a3a3]">
                   {questionsFile.name}
                 </p>
                 {!isLoading && (
                   <button
                     onClick={clearQuestions}
-                    className={`p-1 rounded-lg transition-colors ${
-                      darkMode
-                        ? 'text-slate-600 hover:text-red-400 hover:bg-slate-700'
-                        : 'text-slate-400 hover:text-red-500 hover:bg-red-50'
-                    }`}
+                    className="p-1 rounded-[4px] transition-colors text-[#525252] hover:text-red-400 hover:bg-[#1a1a1a]"
                   >
                     <X size={11} />
                   </button>
@@ -383,10 +356,8 @@ export default function DynamicUploadStep({
               {/* Validation state */}
               {validating && (
                 <div className="flex items-center gap-2">
-                  <Loader2 size={12} className="animate-spin text-blue-400" />
-                  <span className={`text-[11px] font-medium ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                    Validating…
-                  </span>
+                  <Loader2 size={12} className="animate-spin text-amber-400" />
+                  <span className="text-[12px] font-medium text-[#525252]">Validating…</span>
                 </div>
               )}
 
@@ -394,7 +365,7 @@ export default function DynamicUploadStep({
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <CheckCircle2 size={13} className="text-emerald-500 shrink-0" />
-                    <span className={`text-[11px] font-black ${darkMode ? 'text-emerald-400' : 'text-emerald-600'}`}>
+                    <span className="text-[12px] font-semibold text-emerald-400">
                       {validation.question_count} questions loaded
                     </span>
                   </div>
@@ -403,9 +374,7 @@ export default function DynamicUploadStep({
                     <div>
                       <button
                         onClick={() => setPreviewOpen((p) => !p)}
-                        className={`flex items-center gap-1 text-[10px] font-black uppercase tracking-widest transition-colors ${
-                          darkMode ? 'text-slate-500 hover:text-slate-400' : 'text-slate-400 hover:text-slate-600'
-                        }`}
+                        className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-widest transition-colors text-[#525252] hover:text-[#a3a3a3]"
                       >
                         Preview
                         {previewOpen ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
@@ -415,9 +384,7 @@ export default function DynamicUploadStep({
                           {validation.preview.map((q, i) => (
                             <li
                               key={i}
-                              className={`text-[11px] leading-relaxed px-2 py-1 rounded-lg ${
-                                darkMode ? 'bg-slate-800 text-slate-300' : 'bg-white text-slate-600'
-                              }`}
+                              className="text-[12px] leading-relaxed px-2 py-1 rounded-[4px] bg-[#111111] text-[#a3a3a3]"
                             >
                               {i + 1}. {q}
                             </li>
@@ -432,7 +399,7 @@ export default function DynamicUploadStep({
               {validation && !validation.valid && (
                 <div className="flex items-start gap-2">
                   <AlertCircle size={13} className="text-red-500 shrink-0 mt-0.5" />
-                  <p className="text-[11px] text-red-500 font-medium leading-relaxed">
+                  <p className="text-[12px] text-red-400 font-medium leading-relaxed">
                     {validation.error}
                   </p>
                 </div>
@@ -454,7 +421,7 @@ export default function DynamicUploadStep({
 
       {/* Error */}
       {error && (
-        <p className="text-xs text-red-400 font-bold px-1">{error}</p>
+        <p className="text-[13px] text-red-400 font-medium px-1">{error}</p>
       )}
 
       {/* Process button */}

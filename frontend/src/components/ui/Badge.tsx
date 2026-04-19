@@ -1,4 +1,4 @@
-// Badge component: audit status variants + criticality variants + generic tag badges.
+// Badge component: audit semantic status variants + platform status variants.
 
 type BadgeVariant =
   | 'present'
@@ -20,6 +20,7 @@ interface BadgeProps {
 }
 
 const variantClasses: Record<BadgeVariant, string> = {
+  // Semantic audit colors — do not change
   present:
     'bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-900/20 dark:border-emerald-700 dark:text-emerald-400',
   'partially-present':
@@ -35,21 +36,22 @@ const variantClasses: Record<BadgeVariant, string> = {
   medium:
     'bg-yellow-500/10 border-yellow-500/30 text-yellow-500',
   low:
-    'bg-slate-400/10 border-slate-400/30 text-slate-400',
+    'bg-[#1a1a1a] border-[#262626] text-[#525252]',
+  // Platform status variants
   active:
-    'bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-900/20 dark:border-emerald-700 dark:text-emerald-400',
+    'bg-[#1a1a1a] border border-[#262626] text-[#525252] text-[10px] font-medium tracking-wide px-2 py-0.5 rounded-full',
   'coming-soon':
-    'bg-slate-100 border-slate-200 text-slate-500 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400',
+    'bg-[#111111] border border-[#1e1e1e] text-[#525252] text-[10px] px-2 py-0.5 rounded-full',
   default:
-    'bg-slate-100 border-slate-200 text-slate-600 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400',
+    'bg-[#1a1a1a] border-[#262626] text-[#525252]',
 };
 
 export default function Badge({ variant = 'default', children, className = '' }: BadgeProps) {
   return (
     <span
       className={[
-        'inline-flex items-center px-2 py-0.5 rounded-full border',
-        'text-[9px] font-black uppercase tracking-widest',
+        'inline-flex items-center border',
+        'text-[10px] font-medium tracking-wide px-2 py-0.5 rounded-full',
         variantClasses[variant],
         className,
       ].join(' ')}

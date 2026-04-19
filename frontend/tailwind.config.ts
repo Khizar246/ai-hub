@@ -1,14 +1,24 @@
-// Tailwind CSS configuration for AI Hub frontend
+import type { Config } from 'tailwindcss'
 
-import type { Config } from 'tailwindcss';
-
-const config: Config = {
-  content: ['./index.html', './src/**/*.{ts,tsx}'],
+export default {
+  content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
   darkMode: 'class',
   theme: {
-    extend: {},
+    extend: {
+      colors: {
+        noir: {
+          base:      '#0a0a0a',
+          surface:   '#111111',
+          elevated:  '#1a1a1a',
+          border:    '#262626',
+          highlight: '#404040',
+        },
+      },
+      fontFamily: {
+        sans: ['Inter', 'system-ui', 'sans-serif'],
+        mono: ['"JetBrains Mono"', '"Fira Code"', 'monospace'],
+      },
+    },
   },
-  plugins: [require('@tailwindcss/typography')],
-};
-
-export default config;
+  plugins: [],
+} satisfies Config

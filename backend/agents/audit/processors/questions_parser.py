@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import re
-from typing import List
 
 from core.logger import get_logger
 
@@ -27,11 +26,11 @@ _STOP_WORDS = frozenset({
 })
 
 
-def _extract_keywords(text: str, max_keywords: int = 6) -> List[str]:
+def _extract_keywords(text: str, max_keywords: int = 6) -> list[str]:
     """Extract top N meaningful words from a question string."""
     words = re.findall(r"\b[a-zA-Z]{3,}\b", text.lower())
     seen: set[str] = set()
-    keywords: List[str] = []
+    keywords: list[str] = []
     for word in words:
         if word not in _STOP_WORDS and word not in seen:
             seen.add(word)
@@ -41,7 +40,7 @@ def _extract_keywords(text: str, max_keywords: int = 6) -> List[str]:
     return keywords
 
 
-def parse_questions_csv(file_path: str) -> List[dict]:
+def parse_questions_csv(file_path: str) -> list[dict]:
     """
     Read a CSV file and extract audit questions.
 
@@ -75,7 +74,7 @@ def parse_questions_csv(file_path: str) -> List[dict]:
         )
 
     has_criticality = "Criticality" in df.columns
-    questions: List[dict] = []
+    questions: list[dict] = []
 
     for _, row in df.iterrows():
         raw = str(row["Questions"]).strip()

@@ -1,13 +1,11 @@
 // User and assistant chat message bubbles with timestamp and loading skeleton.
 
 import { User, Bot } from 'lucide-react';
-import { useUIStore } from '../../lib/store';
 
 interface ChatBubbleProps {
   role: 'user' | 'assistant';
   content: string;
   timestamp?: Date;
-  /** If true, shows an animated skeleton instead of content. */
   loading?: boolean;
 }
 
@@ -17,10 +15,10 @@ function formatTime(date: Date): string {
 
 const cleanText = (text: string) =>
   text
-    .replace(/\*\*(.*?)\*\*/g, '$1')  // remove **bold**
-    .replace(/\*(.*?)\*/g, '$1')       // remove *italic*
-    .replace(/^#{1,3}\s/gm, '')        // remove ## headers
-    .replace(/^-\s/gm, '• ');          // convert - lists to bullet
+    .replace(/\*\*(.*?)\*\*/g, '$1')
+    .replace(/\*(.*?)\*/g, '$1')
+    .replace(/^#{1,3}\s/gm, '')
+    .replace(/^-\s/gm, '• ');
 
 export default function ChatBubble({
   role,
@@ -28,72 +26,41 @@ export default function ChatBubble({
   timestamp,
   loading = false,
 }: ChatBubbleProps) {
-  const { darkMode } = useUIStore();
   const isUser = role === 'user';
 
   return (
     <div className={`flex gap-3 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
       {/* Avatar */}
       <div
-        className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-1 ${
-          isUser ? 'bg-blue-600 text-white' : 'bg-emerald-500 text-white'
+        className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-1 ${
+          isUser ? 'bg-amber-400 text-[#0a0a0a]' : 'bg-[#1a1a1a] text-[#525252]'
         }`}
       >
-        {isUser ? <User size={14} /> : <Bot size={14} />}
+        {isUser ? <User size={13} /> : <Bot size={13} />}
       </div>
 
       {/* Bubble */}
-      <div
-        className={`max-w-[75%] space-y-1 flex flex-col ${
-          isUser ? 'items-end' : 'items-start'
-        }`}
-      >
+      <div className={`max-w-[75%] space-y-1 flex flex-col ${isUser ? 'items-end' : 'items-start'}`}>
         {loading ? (
-          /* Skeleton */
-          <div
-            className={`px-5 py-4 rounded-[1.5rem] rounded-tl-sm space-y-2 w-48 ${
-              darkMode ? 'bg-slate-800 border border-slate-700' : 'bg-slate-100'
-            }`}
-          >
-            <div
-              className={`h-2.5 w-full rounded-full animate-pulse ${
-                darkMode ? 'bg-slate-700' : 'bg-slate-300'
-              }`}
-            />
-            <div
-              className={`h-2.5 w-3/4 rounded-full animate-pulse ${
-                darkMode ? 'bg-slate-700' : 'bg-slate-300'
-              }`}
-            />
-            <div
-              className={`h-2.5 w-1/2 rounded-full animate-pulse ${
-                darkMode ? 'bg-slate-700' : 'bg-slate-300'
-              }`}
-            />
+          <div className="px-5 py-4 rounded-[8px] rounded-tl-sm space-y-2 w-48 bg-[#111111] border border-[#1e1e1e]">
+            <div className="h-2.5 w-full rounded-full animate-pulse bg-[#262626]" />
+            <div className="h-2.5 w-3/4 rounded-full animate-pulse bg-[#262626]" />
+            <div className="h-2.5 w-1/2 rounded-full animate-pulse bg-[#262626]" />
           </div>
         ) : (
           <div
-            className={`px-5 py-4 rounded-[1.5rem] text-sm leading-relaxed font-medium ${
+            className={`px-4 py-3 text-[14px] leading-relaxed ${
               isUser
-                ? 'bg-blue-600 text-white rounded-tr-sm whitespace-pre-wrap'
-                : darkMode
-                ? 'bg-slate-800 text-slate-200 rounded-tl-sm border border-slate-700'
-                : 'bg-slate-50 text-slate-800 rounded-tl-sm border border-slate-100'
+                ? 'bg-amber-400 text-[#0a0a0a] rounded-[8px] rounded-tr-sm max-w-[80%] ml-auto font-medium'
+                : 'bg-[#111111] border border-[#1e1e1e] text-[#a3a3a3] rounded-[8px] rounded-tl-sm max-w-[80%]'
             }`}
           >
             <p className="whitespace-pre-wrap">{isUser ? content : cleanText(content)}</p>
           </div>
         )}
 
-        {/* Timestamp */}
         {timestamp && !loading && (
-          <p
-            className={`text-[10px] px-1 ${
-              darkMode ? 'text-slate-600' : 'text-slate-400'
-            }`}
-          >
-            {formatTime(timestamp)}
-          </p>
+          <p className="text-[11px] px-1 text-[#525252]">{formatTime(timestamp)}</p>
         )}
       </div>
     </div>

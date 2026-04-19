@@ -13,7 +13,6 @@ export interface AgentMeta {
   route: string;
   status: 'active' | 'coming-soon';
   tags: string[];
-  color: string;          // tailwind color key e.g. 'blue' | 'emerald' | 'purple'
 }
 
 // ─── Audit Agent ─────────────────────────────────────────────────────────────
@@ -73,11 +72,13 @@ export interface ChatMessage {
 // ─── Data Agent ───────────────────────────────────────────────────────────────
 
 export interface DBConfig {
+  db_type: 'postgresql' | 'mysql' | 'mssql';
   host: string;
-  port: number;
+  port: string;
   database: string;
   username: string;
   password: string;
+  ssl_required: boolean;
 }
 
 export interface ColumnMeta {

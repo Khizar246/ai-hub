@@ -1,11 +1,9 @@
 // News Research Agent: URL input panel + chat interface.
-// Uses useUIStore for dark mode and useSession for session ID (no own nav — Shell handles that).
 
 import { useState } from 'react';
 import { Newspaper } from 'lucide-react';
 import UrlInputPanel from './UrlInputPanel';
 import ChatInterface from './ChatInterface';
-import { useUIStore } from '../../lib/store';
 import { useSession } from '../../lib/useSession';
 
 interface ArticleSummary {
@@ -17,7 +15,6 @@ interface ArticleSummary {
 }
 
 export default function NewsAgent() {
-  const { darkMode } = useUIStore();
   const sessionId = useSession();
 
   const [indexedArticles, setIndexedArticles] = useState<ArticleSummary[]>([]);
@@ -39,16 +36,10 @@ export default function NewsAgent() {
 
   return (
     <div className="space-y-6">
-      {/* Article count badge (replaces nav badge from old standalone layout) */}
+      {/* Article count badge */}
       {indexedCount > 0 && (
         <div className="flex items-center gap-2">
-          <div
-            className={`flex items-center gap-2 px-4 py-1.5 rounded-full border text-xs font-black ${
-              darkMode
-                ? 'bg-emerald-900/30 border-emerald-700 text-emerald-400'
-                : 'bg-emerald-50 border-emerald-200 text-emerald-700'
-            }`}
-          >
+          <div className="flex items-center gap-2 px-4 py-1.5 rounded-full border border-[#262626] bg-[#111111] text-[12px] font-semibold text-[#a3a3a3]">
             <div className="w-2 h-2 rounded-full bg-emerald-500" />
             {indexedCount} article{indexedCount !== 1 ? 's' : ''} ready
           </div>
@@ -57,7 +48,6 @@ export default function NewsAgent() {
 
       {/* URL input panel — always visible */}
       <UrlInputPanel
-        darkMode={darkMode}
         sessionId={sessionId}
         onIngested={handleIngested}
       />
@@ -66,7 +56,6 @@ export default function NewsAgent() {
       {hasArticles && (
         <div className="animate-in fade-in duration-500">
           <ChatInterface
-            darkMode={darkMode}
             sessionId={sessionId}
             articleCount={indexedCount}
           />
@@ -75,15 +64,9 @@ export default function NewsAgent() {
 
       {/* Empty state */}
       {!hasArticles && (
-        <div
-          className={`rounded-[2rem] border border-dashed flex flex-col items-center justify-center py-20 gap-4 ${
-            darkMode ? 'border-slate-700 text-slate-600' : 'border-slate-200 text-slate-300'
-          }`}
-        >
-          <Newspaper size={48} />
-          <p className="text-sm font-black uppercase tracking-widest">
-            Ingest articles to begin chatting
-          </p>
+        <div className="border border-dashed border-[#1e1e1e] rounded-[10px] flex flex-col items-center justify-center py-20 gap-4 text-[#525252]">
+          <Newspaper size={36} />
+          <p className="text-[14px] font-semibold">Ingest articles to begin chatting</p>
         </div>
       )}
     </div>

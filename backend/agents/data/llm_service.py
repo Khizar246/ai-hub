@@ -1,6 +1,9 @@
 # SQL generation and explanation prompts ported EXACTLY from Talk_To_Data_Engine/backend/app/services/llm_service.py.
 # Only change: Ollama HTTP call replaced with core/llm_client.call_claude().
 
+import json
+import re
+
 from core.exceptions import AgentError
 from core.llm_client import call_claude
 from core.logger import get_logger
@@ -14,7 +17,9 @@ def get_sql(schema: str, question: str, dialect: str = "sqlite") -> str:
     Returns cleaned SQL string ready for SQLGlot validation.
     """
     dialect_note = (
-        "industry-standard PostgreSQL" if dialect == "postgres"
+        "industry-standard PostgreSQL" if dialect in ("postgres", "postgresql")
+        else "MySQL" if dialect == "mysql"
+        else "Microsoft SQL Server (T-SQL)" if dialect == "tsql"
         else "industry-standard SQLite"
     )
 
@@ -38,8 +43,24 @@ def get_sql(schema: str, question: str, dialect: str = "sqlite") -> str:
         f"5. TIES AND RANKING:\n"
         f"   - Prefer MAX()/MIN() subqueries or RANK() over LIMIT 1.\n"
         f"   - If using SQLite: Do NOT use ROW_NUMBER().\n"
-        f"6. CTEs: Prefer WITH clauses (Common Table Expressions) for clarity in all complex logic.\n"
-        f"7. OUTPUT: Return ONLY raw SQL. No markdown, no backticks, no preamble, no explanation.\n\n"
+        f"6. CTEs: Prefer WITH clauses (Common Table Expressions) for clarity in all complex logic.\n\n"
+        f"### ADDITIONAL SQL RULES\n"
+        f"1. NEVER use SELECT * — always select specific columns that are relevant to the question\n"
+        f"2. Only use CTEs (WITH clauses) when the query genuinely requires reusing logic or has multiple steps. For simple aggregations or single-table queries, write direct SQL without CTEs\n"
+        f"3. Date filtering by month:\n"
+        f"   SQLite: strftime('%m', date_column) = '03'\n"
+        f"   PostgreSQL: EXTRACT(MONTH FROM date_column) = 3\n"
+        f"   MySQL: MONTH(date_column) = 3\n"
+        f"   SQL Server (tsql): MONTH(date_column) = 3 or DATEPART(month, date_column) = 3\n"
+        f"   Use the pattern appropriate for the {dialect} dialect.\n"
+        f"4. Always add LIMIT 10 at the end of every SELECT query unless the user explicitly asks for all records or a specific number. Never return unbounded result sets\n\n"
+        f"### OUTPUT RULES (CRITICAL)\n"
+        f"- Return ONLY the raw SQL query. Nothing else.\n"
+        f"- NO explanations, NO markdown, NO backticks, NO preamble\n"
+        f"- NO thinking out loud, NO 'let me reconsider', NO alternative interpretations\n"
+        f"- NO natural language before or after the SQL\n"
+        f"- If you are uncertain, pick the most likely interpretation and generate SQL for it silently\n"
+        f"- The ENTIRE response must be valid SQL that can be executed directly\n\n"
         f"### SELF-CHECK PROTOCOL\n"
         f"Before finalizing:\n"
         f"- Did I use a comma in the FROM clause? (If yes, replace with JOIN...ON).\n"
@@ -53,7 +74,7 @@ def get_sql(schema: str, question: str, dialect: str = "sqlite") -> str:
 
     try:
         response = call_claude(prompt, temperature=0.0, max_tokens=1024)
-        return _clean_sql(response)
+        return clean_sql_output(response)
     except Exception as exc:
         logger.error(f"SQL generation failed: {exc}")
         raise AgentError(f"SQL generation failed: {exc}") from exc
@@ -65,11 +86,34 @@ def get_explanation(query: str) -> str:
     Includes the refusal guardrail from the original llm_service.py.
     """
     prompt = (
-        f"Analyze the provided SQL query and explain its technical logic in exactly two concise sentences. "
-        f"Constraint: Only describe operations explicitly present in the code (SELECT, JOIN, GROUP BY, etc.). "
-        f"Avoid any introductory fluff or definitions of SQL terms.\n\n"
-        f"SQL: {query}\n\n"
-        f"Technical Explanation:"
+        f"Explain this SQL query in plain English for a non-technical user.\n\n"
+        f"SQL:\n{query}\n\n"
+        f"First assess the complexity of this query:\n"
+        f"- SIMPLE: single table, no joins, no aggregations, no subqueries\n"
+        f"- MEDIUM: has joins, filters, or basic aggregations (GROUP BY, COUNT, SUM)\n"
+        f"- COMPLEX: has CTEs, subqueries, window functions, or 3+ joins\n\n"
+        f"Then write the explanation following these rules:\n\n"
+        f"For SIMPLE queries:\n"
+        f"- 1 sentence summary\n"
+        f"- 1-2 lines max total\n"
+        f"- Example: 'Shows all orders in the database. Returns every row from the orders table with no filters.'\n\n"
+        f"For MEDIUM queries:\n"
+        f"- 1 sentence summary\n"
+        f"- 2-4 bullet points covering only the relevant steps (Tables, Filter, Result, Calculation — only include what applies)\n"
+        f"- 5-7 lines max total\n\n"
+        f"For COMPLEX queries:\n"
+        f"- 1 sentence summary\n"
+        f"- 4-6 bullet points covering all meaningful steps\n"
+        f"- Up to 10 lines\n\n"
+        f"Global rules for all complexity levels:\n"
+        f"- Start with the one-line summary\n"
+        f"- Bullet points use this format exactly: '- Label: explanation' (e.g. '- Tables: ...')\n"
+        f"- Labels should be chosen based on what applies: Tables, Filter, Data, Calculation, Grouping, Result, Subquery, CTE\n"
+        f"- No SQL jargon or technical terms\n"
+        f"- Do NOT restate or describe SQL syntax\n"
+        f"- Plain text only — no markdown, no asterisks, no headers\n"
+        f"- Do NOT include the complexity label in your response\n"
+        f"- Only include bullet points that add meaningful information\n"
     )
 
     try:
@@ -89,20 +133,74 @@ def get_explanation(query: str) -> str:
         return "Unable to generate explanation."
 
 
-def _clean_sql(sql: str) -> str:
+def review_sql(question: str, schema: str, generated_sql: str, dialect: str = "sqlite") -> str:
     """
-    Remove markdown formatting and trim to the first SQL statement.
-    Ported as-is from original LLMService._clean_sql().
+    Silent second-pass SQL reviewer. Returns the final correct SQL.
+    Users never see this step — it runs internally and returns only the corrected SQL.
     """
-    cleaned = sql.replace("```sql", "").replace("```", "").strip()
-    upper = cleaned.upper()
-    start_idx = -1
-    for keyword in ["SELECT", "WITH", "SHOW"]:
-        idx = upper.find(keyword)
-        if idx != -1 and (start_idx == -1 or idx < start_idx):
-            start_idx = idx
-    if start_idx != -1:
-        cleaned = cleaned[start_idx:]
-    if ";" in cleaned:
-        cleaned = cleaned.split(";")[0] + ";"
-    return cleaned
+    prompt = (
+        f"### ROLE\n"
+        f"You are a senior SQL analyst performing a strict code review. "
+        f"Your job is to verify that a generated SQL query correctly and completely answers the user's question.\n\n"
+        f"### USER'S ORIGINAL QUESTION\n{question}\n\n"
+        f"### DATABASE SCHEMA\n{schema}\n\n"
+        f"### SQL TO REVIEW\n{generated_sql}\n\n"
+        f"### REVIEW CHECKLIST — check every item:\n"
+        f"1. Does the SQL actually answer what the user asked? (semantic correctness)\n"
+        f"2. Are the correct tables joined? Are join conditions correct? No Cartesian products?\n"
+        f"3. For 'most', 'highest', 'maximum', 'least' — is it using proper aggregation? Not just LIMIT 1?\n"
+        f"4. Are CTEs complete and correctly referenced? No missing WITH clauses?\n"
+        f"5. Is GROUP BY correct — all non-aggregated columns included?\n"
+        f"6. Are WHERE conditions correct for the question asked?\n"
+        f"7. Is the dialect correct for {dialect}?\n"
+        f"8. Would this query actually run without errors?\n\n"
+        f"### OUTPUT FORMAT\n"
+        f"Respond ONLY with valid JSON. No markdown. No explanation outside the JSON.\n"
+        f"{{\n"
+        f'  "sql": "the final correct SQL — either unchanged if correct, or your corrected version if issues found"\n'
+        f"}}\n"
+    )
+    try:
+        raw = call_claude(
+            prompt=prompt,
+            temperature=0.0,
+            max_tokens=2000,
+        )
+        raw = re.sub(r'```json\s*', '', raw, flags=re.IGNORECASE)
+        raw = re.sub(r'```\s*', '', raw).strip()
+        result = json.loads(raw)
+        corrected = result.get("sql", "").strip()
+        if corrected:
+            return corrected
+        return generated_sql
+    except Exception as e:
+        logger.error(f"SQL review failed silently, using original: {e}")
+        return generated_sql
+
+
+def clean_sql_output(raw: str) -> str:
+    """Strip any thinking/reasoning text, keep only SQL."""
+    # Remove markdown code blocks
+    raw = re.sub(r'```sql\s*', '', raw, flags=re.IGNORECASE)
+    raw = re.sub(r'```\s*', '', raw)
+    # If multiple SQL statements separated by explanatory text,
+    # find the last complete SELECT/WITH/INSERT/UPDATE/DELETE block
+    sql_pattern = re.compile(
+        r'((?:WITH|SELECT|INSERT|UPDATE|DELETE)[\s\S]+?;)',
+        re.IGNORECASE
+    )
+    matches = sql_pattern.findall(raw)
+    if matches:
+        return matches[-1].strip()
+    # Fallback: return everything after the last blank line block
+    # that starts with a SQL keyword
+    lines = raw.strip().split('\n')
+    sql_lines = []
+    in_sql = False
+    for line in lines:
+        if re.match(r'^\s*(WITH|SELECT|INSERT|UPDATE|DELETE|CREATE)', line, re.IGNORECASE):
+            in_sql = True
+            sql_lines = [line]
+        elif in_sql:
+            sql_lines.append(line)
+    return '\n'.join(sql_lines).strip() if sql_lines else raw.strip()
