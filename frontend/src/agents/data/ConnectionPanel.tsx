@@ -38,10 +38,12 @@ export default function ConnectionPanel({ sessionId: _sessionId, onComplete }: C
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const defaultPorts: Record<PostgresConfig['db_type'], string> = {
-    postgresql: '5432',
-    mysql: '3306',
-    mssql: '1433',
+  const [showDbSelector, setShowDbSelector] = useState(false);
+
+  const handleDbSelect = (dbType: PostgresConfig['db_type'], defaultPort: string) => {
+    setPgConfig(prev => ({ ...prev, db_type: dbType, port: defaultPort }));
+    setShowDbSelector(false);
+    setPanelStep('postgres-login');
   };
 
   const [pgConfig, setPgConfig] = useState<PostgresConfig>({
@@ -113,6 +115,7 @@ export default function ConnectionPanel({ sessionId: _sessionId, onComplete }: C
   // ── Landing ───────────────────────────────────────────────────────────────────
   if (panelStep === 'landing') {
     return (
+      <>
       <div className="max-w-4xl mx-auto mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Excel / CSV card */}
         <label className="p-10 rounded-[10px] border border-[#1e1e1e] bg-[#111111] cursor-pointer transition-all group relative overflow-hidden hover:border-amber-400/40 hover:bg-[#131313]">
@@ -151,21 +154,98 @@ export default function ConnectionPanel({ sessionId: _sessionId, onComplete }: C
           </div>
         </label>
 
-        {/* PostgreSQL card */}
+        {/* Live Database card */}
         <div
-          onClick={() => setPanelStep('postgres-login')}
+          onClick={() => setShowDbSelector(true)}
           className="p-10 rounded-[10px] border border-[#1e1e1e] bg-[#111111] cursor-pointer transition-all group relative overflow-hidden hover:border-amber-400/40 hover:bg-[#131313]"
         >
           <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:scale-110 transition-transform">
             <Server size={80} />
           </div>
           <Server size={32} className="text-[#a3a3a3] group-hover:text-amber-400 transition-colors mb-5" />
-          <h2 className="text-[18px] font-semibold text-[#fafafa] mb-1.5">PostgreSQL</h2>
+          <h2 className="text-[18px] font-semibold text-[#fafafa] mb-1.5">Live Database</h2>
           <p className="text-[14px] text-[#525252] leading-relaxed">
-            Connect to production database for live analysis.
+            Connect to a production database for live analysis.
           </p>
+          <div className="flex items-center gap-2 mt-2">
+            <span className="text-[11px] text-[#525252]">Supports:</span>
+            <span className="text-[11px] text-[#404040] font-mono">PostgreSQL · MySQL · SQL Server</span>
+          </div>
         </div>
       </div>
+
+      {showDbSelector && (
+        <div
+          className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center"
+          onClick={() => setShowDbSelector(false)}
+        >
+          <div
+            className="bg-[#111111] border border-[#262626] rounded-[14px] p-8 w-full max-w-[600px] mx-4"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="mb-8">
+              <h2 className="text-[20px] font-semibold text-[#fafafa] mb-1">
+                Choose your database
+              </h2>
+              <p className="text-[13px] text-[#525252]">
+                Select the database you want to connect to. All connections are secure and session-scoped.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
+              <button
+                onClick={() => handleDbSelect('postgresql', '5432')}
+                className="flex flex-col items-center gap-4 p-6 bg-[#0f0f0f] border border-[#1e1e1e] rounded-[10px] hover:border-amber-400/40 hover:bg-[#131313] transition-all duration-150 group text-left"
+              >
+                <div className="w-14 h-14 rounded-[12px] bg-[#336791]/10 border border-[#336791]/20 flex items-center justify-center text-[28px] group-hover:border-[#336791]/40 transition-colors duration-150">
+                  🐘
+                </div>
+                <div>
+                  <p className="text-[14px] font-semibold text-[#fafafa] mb-1">PostgreSQL</p>
+                  <p className="text-[11px] text-[#525252] leading-relaxed">
+                    Open-source relational database. Default port 5432.
+                  </p>
+                </div>
+              </button>
+
+              <button
+                onClick={() => handleDbSelect('mysql', '3306')}
+                className="flex flex-col items-center gap-4 p-6 bg-[#0f0f0f] border border-[#1e1e1e] rounded-[10px] hover:border-amber-400/40 hover:bg-[#131313] transition-all duration-150 group text-left"
+              >
+                <div className="w-14 h-14 rounded-[12px] bg-[#f59e0b]/10 border border-[#f59e0b]/20 flex items-center justify-center text-[28px] group-hover:border-[#f59e0b]/40 transition-colors duration-150">
+                  🐬
+                </div>
+                <div>
+                  <p className="text-[14px] font-semibold text-[#fafafa] mb-1">MySQL</p>
+                  <p className="text-[11px] text-[#525252] leading-relaxed">
+                    World's most popular open-source database. Default port 3306.
+                  </p>
+                </div>
+              </button>
+
+              <button
+                onClick={() => handleDbSelect('mssql', '1433')}
+                className="flex flex-col items-center gap-4 p-6 bg-[#0f0f0f] border border-[#1e1e1e] rounded-[10px] hover:border-amber-400/40 hover:bg-[#131313] transition-all duration-150 group text-left"
+              >
+                <div className="w-14 h-14 rounded-[12px] bg-[#CC2927]/10 border border-[#CC2927]/20 flex items-center justify-center text-[28px] group-hover:border-[#CC2927]/40 transition-colors duration-150">
+                  🗄️
+                </div>
+                <div>
+                  <p className="text-[14px] font-semibold text-[#fafafa] mb-1">SQL Server</p>
+                  <p className="text-[11px] text-[#525252] leading-relaxed">
+                    Microsoft's enterprise database platform. Default port 1433.
+                  </p>
+                </div>
+              </button>
+            </div>
+
+            <p className="text-[11px] text-[#525252] text-center mt-6">
+              Need help? Check the Instructions section above for connection guidance.
+            </p>
+          </div>
+        </div>
+      )}
+      </>
     );
   }
 
@@ -177,23 +257,17 @@ export default function ConnectionPanel({ sessionId: _sessionId, onComplete }: C
           <Server className="text-[#525252]" size={18} /> Database Login
         </h2>
 
-        <div className="flex flex-col gap-1.5">
-          <label className="text-[11px] font-semibold uppercase tracking-wider text-[#525252]">
-            Database Type
-          </label>
-          <select
-            value={pgConfig.db_type}
-            onChange={e => setPgConfig(prev => ({
-              ...prev,
-              db_type: e.target.value as PostgresConfig['db_type'],
-              port: defaultPorts[e.target.value as PostgresConfig['db_type']],
-            }))}
-            className="bg-[#111111] border border-[#1e1e1e] text-[#fafafa] rounded-[6px] px-3 py-2 text-[13px] focus:outline-none focus:border-[#404040]"
+        <div className="flex items-center gap-2 mb-4 px-3 py-2 bg-[#0f0f0f] border border-[#1e1e1e] rounded-[6px]">
+          <span className="text-[11px] text-[#525252]">Connecting to:</span>
+          <span className="text-[12px] font-medium text-amber-400">
+            {pgConfig.db_type === 'postgresql' ? 'PostgreSQL' : pgConfig.db_type === 'mysql' ? 'MySQL' : 'SQL Server'}
+          </span>
+          <button
+            onClick={() => setShowDbSelector(true)}
+            className="ml-auto text-[11px] text-[#525252] hover:text-[#a3a3a3] transition-colors"
           >
-            <option value="postgresql">PostgreSQL</option>
-            <option value="mysql">MySQL</option>
-            <option value="mssql">Microsoft SQL Server</option>
-          </select>
+            Change
+          </button>
         </div>
 
         {(['host', 'database', 'username'] as const).map((field) => (
