@@ -44,6 +44,14 @@ frontend/.vite/
 *.swp
 *.swo
 
+# Claude workspace
+.claude/
+
+# Local documentation
+CLAUDE.md
+README_project.md
+AI_Hub_Project_Documentation.docx
+
 # OS
 .DS_Store
 Thumbs.db
