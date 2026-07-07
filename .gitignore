@@ -34,6 +34,10 @@ frontend/.vite/
 .chroma/
 *.db
 
+# Test / tooling caches
+.pytest_cache/
+.coverage
+
 # IDEs
 .vscode/
 .idea/

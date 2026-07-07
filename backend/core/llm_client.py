@@ -5,9 +5,16 @@ from collections.abc import AsyncGenerator
 
 from anthropic import Anthropic
 
+from core import telemetry
 from core.config import settings
 
-client = Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+# max_retries: SDK retries 429/5xx/connection errors with exponential backoff.
+# timeout: per-attempt ceiling so a hung request can't stall a worker forever.
+client = Anthropic(
+    api_key=settings.ANTHROPIC_API_KEY,
+    max_retries=3,
+    timeout=120.0,
+)
 
 
 def call_claude(
@@ -19,12 +26,19 @@ def call_claude(
 ) -> str:
     """Send a text prompt to Claude and return the full response text."""
     resolved_model = model or settings.CLAUDE_MODEL
-    response = client.messages.create(
-        model=resolved_model,
-        max_tokens=max_tokens,
-        temperature=temperature,
-        system=system,
-        messages=[{"role": "user", "content": prompt}],
+    try:
+        response = client.messages.create(
+            model=resolved_model,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            system=system,
+            messages=[{"role": "user", "content": prompt}],
+        )
+    except Exception:
+        telemetry.record_llm_call(resolved_model, 0, 0, success=False)
+        raise
+    telemetry.record_llm_call(
+        resolved_model, response.usage.input_tokens, response.usage.output_tokens
     )
     return response.content[0].text  # type: ignore[union-attr]
 
@@ -32,25 +46,34 @@ def call_claude(
 def call_claude_vision(image_bytes: bytes, prompt: str) -> str:
     """Send a rendered PDF page image to Claude vision for content extraction."""
     image_data = base64.standard_b64encode(image_bytes).decode("utf-8")
-    response = client.messages.create(
-        model=settings.CLAUDE_VISION_MODEL,
-        max_tokens=2000,
-        messages=[
-            {
-                "role": "user",
-                "content": [
-                    {
-                        "type": "image",
-                        "source": {
-                            "type": "base64",
-                            "media_type": "image/png",
-                            "data": image_data,
+    try:
+        response = client.messages.create(
+            model=settings.CLAUDE_VISION_MODEL,
+            max_tokens=2000,
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "image",
+                            "source": {
+                                "type": "base64",
+                                "media_type": "image/png",
+                                "data": image_data,
+                            },
                         },
-                    },
-                    {"type": "text", "text": prompt},
-                ],
-            }
-        ],
+                        {"type": "text", "text": prompt},
+                    ],
+                }
+            ],
+        )
+    except Exception:
+        telemetry.record_llm_call(settings.CLAUDE_VISION_MODEL, 0, 0, success=False)
+        raise
+    telemetry.record_llm_call(
+        settings.CLAUDE_VISION_MODEL,
+        response.usage.input_tokens,
+        response.usage.output_tokens,
     )
     return response.content[0].text  # type: ignore[union-attr]
 

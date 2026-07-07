@@ -112,6 +112,79 @@ export default function ConnectionPanel({ sessionId: _sessionId, onComplete }: C
     setLoading(false);
   };
 
+  // Rendered from both the landing and login steps so "Change" works everywhere.
+  const dbSelectorModal = showDbSelector && (
+    <div
+      className="fixed inset-0 bg-black/70 z-50 flex flex-col md:items-center md:justify-center"
+      onClick={() => setShowDbSelector(false)}
+    >
+      <div
+        className="bg-[#111111] border-0 md:border border-[#262626] md:rounded-[14px] p-6 md:p-8 w-full md:max-w-[600px] md:mx-4 h-full md:h-auto overflow-y-auto"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="mb-8">
+          <h2 className="text-[20px] font-semibold text-[#fafafa] mb-1">
+            Choose your database
+          </h2>
+          <p className="text-[13px] text-[#525252]">
+            Select the database you want to connect to. All connections are secure and session-scoped.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <button
+            onClick={() => handleDbSelect('postgresql', '5432')}
+            className="flex flex-col items-center gap-4 p-6 bg-[#0f0f0f] border border-[#1e1e1e] rounded-[10px] hover:border-amber-400/40 hover:bg-[#131313] transition-all duration-150 group text-left"
+          >
+            <div className="w-14 h-14 rounded-[12px] bg-[#336791]/10 border border-[#336791]/20 flex items-center justify-center text-[28px] group-hover:border-[#336791]/40 transition-colors duration-150">
+              🐘
+            </div>
+            <div>
+              <p className="text-[14px] font-semibold text-[#fafafa] mb-1">PostgreSQL</p>
+              <p className="text-[11px] text-[#525252] leading-relaxed">
+                Open-source relational database. Default port 5432.
+              </p>
+            </div>
+          </button>
+
+          <button
+            onClick={() => handleDbSelect('mysql', '3306')}
+            className="flex flex-col items-center gap-4 p-6 bg-[#0f0f0f] border border-[#1e1e1e] rounded-[10px] hover:border-amber-400/40 hover:bg-[#131313] transition-all duration-150 group text-left"
+          >
+            <div className="w-14 h-14 rounded-[12px] bg-[#f59e0b]/10 border border-[#f59e0b]/20 flex items-center justify-center text-[28px] group-hover:border-[#f59e0b]/40 transition-colors duration-150">
+              🐬
+            </div>
+            <div>
+              <p className="text-[14px] font-semibold text-[#fafafa] mb-1">MySQL</p>
+              <p className="text-[11px] text-[#525252] leading-relaxed">
+                World's most popular open-source database. Default port 3306.
+              </p>
+            </div>
+          </button>
+
+          <button
+            onClick={() => handleDbSelect('mssql', '1433')}
+            className="flex flex-col items-center gap-4 p-6 bg-[#0f0f0f] border border-[#1e1e1e] rounded-[10px] hover:border-amber-400/40 hover:bg-[#131313] transition-all duration-150 group text-left"
+          >
+            <div className="w-14 h-14 rounded-[12px] bg-[#CC2927]/10 border border-[#CC2927]/20 flex items-center justify-center text-[28px] group-hover:border-[#CC2927]/40 transition-colors duration-150">
+              🗄️
+            </div>
+            <div>
+              <p className="text-[14px] font-semibold text-[#fafafa] mb-1">SQL Server</p>
+              <p className="text-[11px] text-[#525252] leading-relaxed">
+                Microsoft's enterprise database platform. Default port 1433.
+              </p>
+            </div>
+          </button>
+        </div>
+
+        <p className="text-[11px] text-[#525252] text-center mt-6">
+          Need help? Check the Instructions section above for connection guidance.
+        </p>
+      </div>
+    </div>
+  );
+
   // ── Landing ───────────────────────────────────────────────────────────────────
   if (panelStep === 'landing') {
     return (
@@ -174,77 +247,7 @@ export default function ConnectionPanel({ sessionId: _sessionId, onComplete }: C
         </div>
       </div>
 
-      {showDbSelector && (
-        <div
-          className="fixed inset-0 bg-black/70 z-50 flex flex-col md:items-center md:justify-center"
-          onClick={() => setShowDbSelector(false)}
-        >
-          <div
-            className="bg-[#111111] border-0 md:border border-[#262626] md:rounded-[14px] p-6 md:p-8 w-full md:max-w-[600px] md:mx-4 h-full md:h-auto overflow-y-auto"
-            onClick={e => e.stopPropagation()}
-          >
-            <div className="mb-8">
-              <h2 className="text-[20px] font-semibold text-[#fafafa] mb-1">
-                Choose your database
-              </h2>
-              <p className="text-[13px] text-[#525252]">
-                Select the database you want to connect to. All connections are secure and session-scoped.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <button
-                onClick={() => handleDbSelect('postgresql', '5432')}
-                className="flex flex-col items-center gap-4 p-6 bg-[#0f0f0f] border border-[#1e1e1e] rounded-[10px] hover:border-amber-400/40 hover:bg-[#131313] transition-all duration-150 group text-left"
-              >
-                <div className="w-14 h-14 rounded-[12px] bg-[#336791]/10 border border-[#336791]/20 flex items-center justify-center text-[28px] group-hover:border-[#336791]/40 transition-colors duration-150">
-                  🐘
-                </div>
-                <div>
-                  <p className="text-[14px] font-semibold text-[#fafafa] mb-1">PostgreSQL</p>
-                  <p className="text-[11px] text-[#525252] leading-relaxed">
-                    Open-source relational database. Default port 5432.
-                  </p>
-                </div>
-              </button>
-
-              <button
-                onClick={() => handleDbSelect('mysql', '3306')}
-                className="flex flex-col items-center gap-4 p-6 bg-[#0f0f0f] border border-[#1e1e1e] rounded-[10px] hover:border-amber-400/40 hover:bg-[#131313] transition-all duration-150 group text-left"
-              >
-                <div className="w-14 h-14 rounded-[12px] bg-[#f59e0b]/10 border border-[#f59e0b]/20 flex items-center justify-center text-[28px] group-hover:border-[#f59e0b]/40 transition-colors duration-150">
-                  🐬
-                </div>
-                <div>
-                  <p className="text-[14px] font-semibold text-[#fafafa] mb-1">MySQL</p>
-                  <p className="text-[11px] text-[#525252] leading-relaxed">
-                    World's most popular open-source database. Default port 3306.
-                  </p>
-                </div>
-              </button>
-
-              <button
-                onClick={() => handleDbSelect('mssql', '1433')}
-                className="flex flex-col items-center gap-4 p-6 bg-[#0f0f0f] border border-[#1e1e1e] rounded-[10px] hover:border-amber-400/40 hover:bg-[#131313] transition-all duration-150 group text-left"
-              >
-                <div className="w-14 h-14 rounded-[12px] bg-[#CC2927]/10 border border-[#CC2927]/20 flex items-center justify-center text-[28px] group-hover:border-[#CC2927]/40 transition-colors duration-150">
-                  🗄️
-                </div>
-                <div>
-                  <p className="text-[14px] font-semibold text-[#fafafa] mb-1">SQL Server</p>
-                  <p className="text-[11px] text-[#525252] leading-relaxed">
-                    Microsoft's enterprise database platform. Default port 1433.
-                  </p>
-                </div>
-              </button>
-            </div>
-
-            <p className="text-[11px] text-[#525252] text-center mt-6">
-              Need help? Check the Instructions section above for connection guidance.
-            </p>
-          </div>
-        </div>
-      )}
+      {dbSelectorModal}
       </>
     );
   }
@@ -252,6 +255,7 @@ export default function ConnectionPanel({ sessionId: _sessionId, onComplete }: C
   // ── Postgres login form ────────────────────────────────────────────────────────
   if (panelStep === 'postgres-login') {
     return (
+      <>
       <div className="p-5 md:p-8 rounded-[10px] border border-[#1e1e1e] bg-[#111111] max-w-md mx-auto space-y-4">
         <h2 className="text-[18px] font-semibold text-[#fafafa] mb-6 flex items-center gap-2">
           <Server className="text-[#525252]" size={18} /> Database Login
@@ -327,6 +331,8 @@ export default function ConnectionPanel({ sessionId: _sessionId, onComplete }: C
           {loading ? 'Connecting…' : 'Connect Server'}
         </Button>
       </div>
+      {dbSelectorModal}
+      </>
     );
   }
 

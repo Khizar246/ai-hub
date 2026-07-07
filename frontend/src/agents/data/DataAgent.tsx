@@ -109,7 +109,11 @@ export default function DataAgent() {
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-[#262626] bg-[#0f0f0f] text-[11px] font-semibold text-[#a3a3a3] uppercase tracking-widest">
           <div
             className={`w-1.5 h-1.5 rounded-full ${
-              loading ? 'bg-amber-400 animate-pulse' : 'bg-emerald-500'
+              loading
+                ? 'bg-amber-400 animate-pulse'
+                : status.toLowerCase().includes('error')
+                  ? 'bg-red-500'
+                  : 'bg-emerald-500'
             }`}
           />
           {status}

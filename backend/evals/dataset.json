@@ -1,0 +1,80 @@
+{
+  "description": "Golden NL-to-SQL cases scored against evals/fixture.db. Ground truth = result of expected_sql, compared order-insensitively.",
+  "cases": [
+    {
+      "id": "simple-filter",
+      "question": "Show the names of all customers who live in Karachi.",
+      "expected_sql": "SELECT name FROM customers WHERE city = 'Karachi'"
+    },
+    {
+      "id": "count-all",
+      "question": "How many orders are there in total?",
+      "expected_sql": "SELECT COUNT(*) FROM orders"
+    },
+    {
+      "id": "filter-status",
+      "question": "How many orders were cancelled?",
+      "expected_sql": "SELECT COUNT(*) FROM orders WHERE status = 'cancelled'"
+    },
+    {
+      "id": "group-by-city",
+      "question": "How many customers are there in each city? Show the city and the count.",
+      "expected_sql": "SELECT city, COUNT(*) FROM customers GROUP BY city"
+    },
+    {
+      "id": "join-simple",
+      "question": "List the names of customers who have at least one completed order, without duplicates.",
+      "expected_sql": "SELECT DISTINCT c.name FROM customers c JOIN orders o ON c.customer_id = o.customer_id WHERE o.status = 'completed'"
+    },
+    {
+      "id": "date-month",
+      "question": "How many orders were placed in May 2024?",
+      "expected_sql": "SELECT COUNT(*) FROM orders WHERE strftime('%Y-%m', order_date) = '2024-05'"
+    },
+    {
+      "id": "aggregate-revenue",
+      "question": "What is the total revenue from completed orders? Revenue is quantity times unit price.",
+      "expected_sql": "SELECT SUM(oi.quantity * p.price) FROM order_items oi JOIN products p ON oi.product_id = p.product_id JOIN orders o ON oi.order_id = o.order_id WHERE o.status = 'completed'"
+    },
+    {
+      "id": "revenue-per-category",
+      "question": "Show the total revenue for each product category from completed orders. Return the category and the revenue.",
+      "expected_sql": "SELECT p.category, SUM(oi.quantity * p.price) FROM order_items oi JOIN products p ON oi.product_id = p.product_id JOIN orders o ON oi.order_id = o.order_id WHERE o.status = 'completed' GROUP BY p.category"
+    },
+    {
+      "id": "max-with-ties",
+      "question": "Which customer or customers placed the most completed orders? Return the name and the number of completed orders.",
+      "expected_sql": "WITH counts AS (SELECT c.name AS name, COUNT(*) AS n FROM customers c JOIN orders o ON c.customer_id = o.customer_id WHERE o.status = 'completed' GROUP BY c.customer_id, c.name) SELECT name, n FROM counts WHERE n = (SELECT MAX(n) FROM counts)"
+    },
+    {
+      "id": "avg-price-category",
+      "question": "What is the average product price per category? Return the category and average price.",
+      "expected_sql": "SELECT category, AVG(price) FROM products GROUP BY category"
+    },
+    {
+      "id": "top-product-quantity",
+      "question": "Which product or products have been ordered in the largest total quantity across all orders? Return the product name and the total quantity.",
+      "expected_sql": "WITH totals AS (SELECT p.product_name AS product_name, SUM(oi.quantity) AS q FROM order_items oi JOIN products p ON oi.product_id = p.product_id GROUP BY p.product_id, p.product_name) SELECT product_name, q FROM totals WHERE q = (SELECT MAX(q) FROM totals)"
+    },
+    {
+      "id": "having-filter",
+      "question": "Which cities have more than 2 customers? Return the city and the customer count.",
+      "expected_sql": "SELECT city, COUNT(*) FROM customers GROUP BY city HAVING COUNT(*) > 2"
+    },
+    {
+      "id": "no-orders",
+      "question": "List the names of customers who have never placed any order.",
+      "expected_sql": "SELECT name FROM customers WHERE customer_id NOT IN (SELECT DISTINCT customer_id FROM orders)"
+    },
+    {
+      "id": "multi-join-detail",
+      "question": "For order 6, list the product names and quantities it contains.",
+      "expected_sql": "SELECT p.product_name, oi.quantity FROM order_items oi JOIN products p ON oi.product_id = p.product_id WHERE oi.order_id = 6"
+    },
+    {
+      "id": "signup-quarter",
+      "question": "How many customers signed up in March 2024?",
+      "expected_sql": "SELECT COUNT(*) FROM customers WHERE strftime('%Y-%m', signup_date) = '2024-03'"
+    }
+  ]
+}

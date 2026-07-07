@@ -1,111 +1,92 @@
 # AI Hub
 
-A unified platform consolidating three AI agents into a single FastAPI + React application.
+[![CI](https://github.com/Khizar246/ai-hub/actions/workflows/ci.yml/badge.svg)](https://github.com/Khizar246/ai-hub/actions/workflows/ci.yml)
 
----
+A unified platform consolidating three AI agents into a single FastAPI + React application, powered by Claude.
 
-## Agents
-
-| Agent | Description |
+| Agent | What it does |
 |---|---|
-| **AI Audit Agent** | Upload documents and a CSV of audit questions. The agent analyzes documents against your questions using dual-layer extraction (pdfplumber + Claude Vision) and HyDE semantic retrieval over ChromaDB. |
-| **News Research Agent** | Paste article URLs, scrape them via Crawl4AI, and ask questions over the indexed content. Powered by FAISS vector search and a LangGraph conversational agent with full chat history. |
-| **TalkToData Engine** | Connect PostgreSQL or upload an Excel/SQLite file and ask questions in plain English. Claude generates validated SQL with sqlglot, executes it, and returns structured results. |
+| **AI Audit Agent** | Upload documents (PDF, DOCX, PPTX, XLSX, CSV) plus a CSV of audit questions → compliance report with status, confidence, observations, and Excel export. Dual-layer PDF extraction (pdfplumber + Claude Vision) and HyDE semantic retrieval over ChromaDB. |
+| **News Research Agent** | Paste article URLs → semantic Q&A with full multi-turn chat history and source citations. FAISS vector search + LangGraph conversational pipeline. |
+| **TalkToData Engine** | Connect PostgreSQL, MySQL, or SQL Server — or upload Excel/CSV → plain English to validated SQL → execute → results table. Three-pass pipeline (generate → review → validate), SQLGlot AST validation, read-only execution guard. |
 
----
+## Tech Stack
 
-## Prerequisites
+- **Backend** — Python 3.11, FastAPI, Anthropic SDK, LangGraph, VoyageAI embeddings, ChromaDB, FAISS, Redis, SQLGlot
+- **Frontend** — React 18, TypeScript, Vite, Tailwind CSS
+- **Infrastructure** — Railway (backend + Redis), Vercel (frontend), GitHub Actions (CI)
 
-- Python 3.11+
-- Node.js 20+
-- Redis (running locally on port 6379, or via Docker)
-- An Anthropic API key (`ANTHROPIC_API_KEY`)
-- A Voyage AI API key (`VOYAGE_API_KEY`) for embeddings
+## Quickstart
 
----
+Prerequisites: Python 3.11+, Node.js 18+, Redis running locally.
 
-## Quick Start
+### Backend
 
 ```bash
-# 1. Clone the repo and enter the project
-git clone <repo-url>
-cd ai-hub
-
-# 2. Copy the example env file and fill in your keys
-cp .env.example .env
-# Open .env and set ANTHROPIC_API_KEY and VOYAGE_API_KEY at minimum
-
-# 3. Install all dependencies (Python + Node)
-make install
-
-# 4. Start backend and frontend concurrently
-make dev
+cd backend
+python -m venv venv
+venv\Scripts\activate          # Windows; Linux/macOS: source venv/bin/activate
+pip install -r requirements-dev.txt
+cp ../.env.example .env        # fill in ANTHROPIC_API_KEY and VOYAGE_API_KEY
+uvicorn main:app --reload --port 8000
 ```
 
-Open http://localhost:5173 in your browser to access the dashboard.
-
----
-
-## Development Commands
-
-| Command | Description |
-|---|---|
-| `make install` | Install Python + Node dependencies |
-| `make dev` | Run backend and frontend concurrently |
-| `make dev-backend` | Run only the FastAPI backend with hot reload |
-| `make dev-frontend` | Run only the Vite frontend dev server |
-| `make docker-up` | Build and start all services via Docker Compose |
-| `make docker-down` | Stop all Docker Compose services |
-| `make lint` | Run ruff + mypy (Python) and eslint (TypeScript) |
-
----
-
-## Docker
+### Frontend
 
 ```bash
-# Start everything (backend + frontend + Redis) in containers
-make docker-up
-
-# Stop
-make docker-down
+cd frontend
+npm install
+npm run dev                    # http://localhost:5173 — proxies /api → backend:8000
 ```
 
-Requires Docker Desktop. The `.env` file is mounted into the backend container automatically.
+## Configuration
 
----
+All settings load from `backend/.env` via pydantic-settings. Required: `ANTHROPIC_API_KEY`, `VOYAGE_API_KEY`, `REDIS_URL`. Optional highlights:
 
-## Folder Structure
+| Variable | Default | Purpose |
+|---|---|---|
+| `CLAUDE_MODEL` | `claude-sonnet-4-5` | Main text-generation model |
+| `CLAUDE_VISION_MODEL` | `claude-opus-4-5` | PDF image/table extraction |
+| `APP_ACCESS_CODE` | *(empty — auth off)* | When set, the app requires login with this access code |
 
-```
-ai-hub/
-├── backend/
-│   ├── main.py                  # FastAPI app — mounts all agent routers
-│   ├── requirements.txt
-│   ├── Dockerfile
-│   ├── core/                    # Shared infrastructure (LLM client, sessions, config)
-│   └── agents/
-│       ├── audit/               # AI Audit Agent
-│       ├── news/                # News Research Agent
-│       └── data/                # TalkToData Engine
-└── frontend/
-    ├── package.json
-    ├── vite.config.ts           # Proxies /api → localhost:8000
-    ├── Dockerfile
-    └── src/
-        ├── App.tsx              # React Router entry
-        ├── lib/                 # api.ts, agentRegistry.ts, hooks
-        ├── components/          # Shared layout + UI components
-        ├── pages/               # Dashboard, AgentPage
-        └── agents/              # audit/, news/, data/ UIs
+See `.env.example` for the full list.
+
+## Testing & Quality
+
+```bash
+# Unit + integration tests (no API keys or external services needed)
+cd backend && venv\Scripts\python -m pytest tests -q
+
+# NL-to-SQL accuracy eval (needs a real ANTHROPIC_API_KEY; costs a few cents)
+cd backend && venv\Scripts\python -m evals.run_eval
 ```
 
----
+CI runs the backend test suite and the frontend typecheck/build on every push and pull request.
 
-## Architecture Notes
+## Observability
 
-- All LLM calls go through `backend/core/llm_client.py` — never call Anthropic directly in agent code.
-- Session state is persisted in Redis via `backend/core/session_manager.py`.
-- The frontend reads `src/lib/agentRegistry.ts` as the single source of truth for all agent metadata.
-- Adding a fourth agent = one entry in `agentRegistry.ts` + one folder in `backend/agents/` + one folder in `frontend/src/agents/`.
+- `GET /health` — liveness probe
+- `GET /stats` — today's LLM calls, token usage, estimated cost, and SQL execution failure rate (Redis-backed counters)
 
-See `CLAUDE.md` for the full specification, build order, and migration guide.
+## Deployment
+
+Push to `main` → GitHub Actions CI → Railway redeploys the backend, Vercel redeploys the frontend.
+
+- **Railway** — root `backend/`, start `uvicorn main:app --host 0.0.0.0 --port $PORT`; set `ANTHROPIC_API_KEY`, `VOYAGE_API_KEY`, `REDIS_URL` (and `APP_ACCESS_CODE` to enable the login gate)
+- **Vercel** — root `frontend/`, build `npm run build`, output `dist/`; set `VITE_API_URL` to the Railway backend URL
+
+## Repository Layout
+
+```
+backend/
+  core/          # config, LLM client, auth, telemetry, session store, logging
+  agents/        # audit / news / data — router + schemas + pipeline per agent
+  middleware/    # rate limiter, request logger
+  tests/         # pytest suite (runs in CI)
+  evals/         # NL-to-SQL golden dataset + accuracy runner
+frontend/
+  src/agents/    # per-agent UI (audit / news / data)
+  src/pages/     # Dashboard, AgentPage, Login
+  src/lib/       # API client, agent registry, session hook
+Data/            # sample datasets for trying the agents
+```

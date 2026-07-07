@@ -37,6 +37,10 @@ def get_sql(schema: str, question: str, dialect: str = "sqlite") -> str:
         f"   - Return the aggregate value in the SELECT list.\n"
         f"   - Handle ties explicitly. Do NOT use LIMIT 1 unless the question explicitly asks for exactly one result.\n"
         f"3. GROUP BY: Always group by all non-aggregated columns.\n"
+        f"   IDENTIFIERS: If a table or column name contains spaces or special characters, "
+        f"quote it using the correct style for the dialect "
+        f"(\"double quotes\" for SQLite/PostgreSQL, `backticks` for MySQL, [brackets] for SQL Server). "
+        f"Copy identifier names EXACTLY as they appear in the schema — never invent or rename columns.\n"
         f"4. SINGLE TABLE RULE:\n"
         f"   - If the schema contains only one table, assume a denormalized structure.\n"
         f"   - Include descriptive columns in GROUP BY when aggregating.\n"
@@ -60,7 +64,8 @@ def get_sql(schema: str, question: str, dialect: str = "sqlite") -> str:
         f"- NO thinking out loud, NO 'let me reconsider', NO alternative interpretations\n"
         f"- NO natural language before or after the SQL\n"
         f"- If you are uncertain, pick the most likely interpretation and generate SQL for it silently\n"
-        f"- The ENTIRE response must be valid SQL that can be executed directly\n\n"
+        f"- The ENTIRE response must be valid SQL that can be executed directly\n"
+        f"- End the query with a semicolon\n\n"
         f"### SELF-CHECK PROTOCOL\n"
         f"Before finalizing:\n"
         f"- Did I use a comma in the FROM clause? (If yes, replace with JOIN...ON).\n"
@@ -156,6 +161,7 @@ def review_sql(question: str, schema: str, generated_sql: str, dialect: str = "s
         f"8. Would this query actually run without errors?\n\n"
         f"### OUTPUT FORMAT\n"
         f"Respond ONLY with valid JSON. No markdown. No explanation outside the JSON.\n"
+        f"Escape newlines inside the SQL string as \\n so the JSON stays valid.\n"
         f"{{\n"
         f'  "sql": "the final correct SQL — either unchanged if correct, or your corrected version if issues found"\n'
         f"}}\n"
@@ -166,10 +172,9 @@ def review_sql(question: str, schema: str, generated_sql: str, dialect: str = "s
             temperature=0.0,
             max_tokens=2000,
         )
-        raw = re.sub(r'```json\s*', '', raw, flags=re.IGNORECASE)
-        raw = re.sub(r'```\s*', '', raw).strip()
+        raw = re.sub(r'```(?:json)?\s*', '', raw, flags=re.IGNORECASE).strip()
         result = json.loads(raw)
-        corrected = result.get("sql", "").strip()
+        corrected = str(result.get("sql") or "").strip()
         if corrected:
             return corrected
         return generated_sql
@@ -179,28 +184,20 @@ def review_sql(question: str, schema: str, generated_sql: str, dialect: str = "s
 
 
 def clean_sql_output(raw: str) -> str:
-    """Strip any thinking/reasoning text, keep only SQL."""
-    # Remove markdown code blocks
-    raw = re.sub(r'```sql\s*', '', raw, flags=re.IGNORECASE)
-    raw = re.sub(r'```\s*', '', raw)
-    # If multiple SQL statements separated by explanatory text,
-    # find the last complete SELECT/WITH/INSERT/UPDATE/DELETE block
-    sql_pattern = re.compile(
-        r'((?:WITH|SELECT|INSERT|UPDATE|DELETE)[\s\S]+?;)',
-        re.IGNORECASE
+    """
+    Strip markdown fences and surrounding prose, keep only the SQL.
+    Keeps everything from the first statement keyword onward so multi-line
+    CTEs are never truncated (inner lines of a WITH block start with SELECT).
+    """
+    raw = re.sub(r'```(?:sql)?\s*', '', raw, flags=re.IGNORECASE).strip()
+    # Take everything from the first line that starts a SQL statement…
+    match = re.search(
+        r'^\s*(WITH|SELECT|INSERT|UPDATE|DELETE|CREATE)\b',
+        raw,
+        re.IGNORECASE | re.MULTILINE,
     )
-    matches = sql_pattern.findall(raw)
-    if matches:
-        return matches[-1].strip()
-    # Fallback: return everything after the last blank line block
-    # that starts with a SQL keyword
-    lines = raw.strip().split('\n')
-    sql_lines = []
-    in_sql = False
-    for line in lines:
-        if re.match(r'^\s*(WITH|SELECT|INSERT|UPDATE|DELETE|CREATE)', line, re.IGNORECASE):
-            in_sql = True
-            sql_lines = [line]
-        elif in_sql:
-            sql_lines.append(line)
-    return '\n'.join(sql_lines).strip() if sql_lines else raw.strip()
+    sql = raw[match.start():] if match else raw
+    # …and drop trailing prose after the last semicolon when one exists.
+    if ';' in sql:
+        sql = sql[: sql.rindex(';') + 1]
+    return sql.strip()

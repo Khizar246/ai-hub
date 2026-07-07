@@ -36,16 +36,13 @@ export default function SchemaEditor({
   onStartAnalysis,
 }: SchemaEditorProps) {
 
-  const updateTableName = (tIdx: number, value: string) => {
-    const next = [...tables];
-    next[tIdx] = { ...next[tIdx], table_name: value };
-    onChange(next);
-  };
-
+  // Table and column names are intentionally locked: they must match the real
+  // database objects or every generated query would fail. Types and
+  // descriptions are the editable parts that guide the AI.
   const updateColumn = (
     tIdx: number,
     cIdx: number,
-    field: keyof ColumnReview,
+    field: 'data_type' | 'description',
     value: string
   ) => {
     const next = tables.map((t, ti) =>
@@ -75,6 +72,9 @@ export default function SchemaEditor({
           <p className="text-[#525252] text-[12px] font-medium uppercase tracking-widest mt-1">
             Reviewing {tables.length} Table{tables.length !== 1 ? 's' : ''}
           </p>
+          <p className="text-[#525252] text-[12px] mt-2 normal-case tracking-normal">
+            Add column descriptions to help the AI understand your data — names are locked to match the source.
+          </p>
         </div>
         <Button
           variant="primary"
@@ -96,11 +96,9 @@ export default function SchemaEditor({
             {/* Table name row */}
             <div className="flex items-center gap-3 mb-6 border-b border-[#1e1e1e] pb-3">
               <TableIcon className="text-amber-400 shrink-0" size={16} />
-              <input
-                className="text-[16px] font-semibold bg-transparent outline-none w-full text-[#fafafa]"
-                value={table.table_name}
-                onChange={(e) => updateTableName(tIdx, e.target.value)}
-              />
+              <span className="text-[16px] font-semibold text-[#fafafa]">
+                {table.table_name}
+              </span>
             </div>
 
             {/* Column rows */}
@@ -110,16 +108,18 @@ export default function SchemaEditor({
                   key={cIdx}
                   className="flex gap-4 items-center p-3 rounded-[6px] border border-transparent bg-[#0f0f0f] transition-all hover:border-[#262626]"
                 >
-                  <input
-                    className="flex-1 font-medium text-[14px] bg-transparent outline-none px-2 text-[#a3a3a3]"
-                    value={col.name}
-                    onChange={(e) => updateColumn(tIdx, cIdx, 'name', e.target.value)}
-                  />
+                  <span className="flex-1 font-medium text-[14px] px-2 text-[#a3a3a3] truncate" title={col.name}>
+                    {col.name}
+                  </span>
                   <select
                     className="px-3 py-1.5 rounded-[6px] text-[12px] font-medium outline-none bg-[#111111] border border-[#262626] text-[#a3a3a3]"
                     value={col.data_type}
                     onChange={(e) => updateColumn(tIdx, cIdx, 'data_type', e.target.value)}
                   >
+                    {/* Live-DB types (e.g. CHARACTER VARYING) may not be in the preset list */}
+                    {!DATA_TYPES.includes(col.data_type) && (
+                      <option value={col.data_type}>{col.data_type}</option>
+                    )}
                     {DATA_TYPES.map((type) => (
                       <option key={type} value={type}>{type}</option>
                     ))}

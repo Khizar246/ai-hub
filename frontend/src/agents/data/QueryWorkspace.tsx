@@ -7,6 +7,7 @@ import {
   Play, RotateCcw, Search, Send, X,
 } from 'lucide-react';
 import CodeBlock from '../../components/ui/CodeBlock';
+import HeroCard from './HeroCard';
 import api from '../../lib/api';
 
 interface PostgresConfig {
@@ -89,20 +90,26 @@ function renderExplanation(text: string) {
 
 function ResultsTable({
   result,
-  sortCol,
-  sortDir,
-  onSort,
   onExportCSV,
   onClear,
 }: {
   result: QueryResult;
-  sortCol: string | null;
-  sortDir: 'asc' | 'desc';
-  onSort: (col: string) => void;
   onExportCSV: (result: QueryResult) => void;
   onClear: () => void;
 }) {
   const tableContainerRef = useRef<HTMLDivElement>(null);
+  // Sort state is per-table: sorting one result must not re-sort other cards.
+  const [sortCol, setSortCol] = useState<string | null>(null);
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+
+  const toggleSort = (col: string) => {
+    if (sortCol === col) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortCol(col);
+      setSortDir('asc');
+    }
+  };
 
   const sortedRows = sortCol
     ? [...result.rows].sort((a, b) => {
@@ -163,7 +170,7 @@ function ResultsTable({
               {result.columns.map((col) => (
                 <th
                   key={col}
-                  onClick={() => onSort(col)}
+                  onClick={() => toggleSort(col)}
                   className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider cursor-pointer transition-colors duration-100 border-b border-[#1e1e1e] whitespace-nowrap overflow-hidden text-ellipsis"
                   style={{ width: `${100 / result.columns.length}%` }}
                 >
@@ -243,8 +250,7 @@ export default function QueryWorkspace({
   const [results, setResults] = useState<Record<number, QueryResult>>({});
   const [copiedId, setCopiedId] = useState<number | null>(null);
   const [execErrors, setExecErrors] = useState<Record<number, string>>({});
-  const [sortCol, setSortCol] = useState<string | null>(null);
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+  const [askError, setAskError] = useState<string | null>(null);
   const [collapsedCards, setCollapsedCards] = useState<Set<number>>(new Set());
 
   const toggleCard = (index: number) => {
@@ -257,8 +263,9 @@ export default function QueryWorkspace({
   };
 
   const onAsk = async () => {
-    if (!question.trim()) return;
+    if (!question.trim() || loading) return;
     setLoading(true);
+    setAskError(null);
     onStatusChange?.('Thinking…');
     try {
       const res = await api.post('/agents/data/ask', { question });
@@ -277,7 +284,12 @@ export default function QueryWorkspace({
       setHistory((prev) => [entry, ...prev]);
       setQuestion('');
       onStatusChange?.('Success');
-    } catch {
+    } catch (err: unknown) {
+      const detail =
+        err && typeof err === 'object' && 'response' in err
+          ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
+          : undefined;
+      setAskError(detail || 'SQL generation failed. Please try rephrasing your question.');
       onStatusChange?.('AI Error');
     }
     setLoading(false);
@@ -316,14 +328,14 @@ export default function QueryWorkspace({
 
   const exportCSV = (result: QueryResult) => {
     if (!result?.rows?.length) return;
-    const headers = result.columns.join(',');
-    const rows = result.rows.map(row =>
-      row.map(val => {
-        if (val === null || val === undefined) return '';
-        const str = String(val);
-        return str.includes(',') ? `"${str}"` : str;
-      }).join(',')
-    ).join('\n');
+    const escapeCell = (val: string | number | null | undefined): string => {
+      if (val === null || val === undefined) return '';
+      const str = String(val);
+      // RFC 4180: quote cells containing commas, quotes, or newlines; double embedded quotes
+      return /[",\n\r]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
+    };
+    const headers = result.columns.map(escapeCell).join(',');
+    const rows = result.rows.map(row => row.map(escapeCell).join(',')).join('\n');
     const csv = `${headers}\n${rows}`;
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -332,15 +344,6 @@ export default function QueryWorkspace({
     a.download = 'query_results.csv';
     a.click();
     URL.revokeObjectURL(url);
-  };
-
-  const toggleSort = (col: string) => {
-    if (sortCol === col) {
-      setSortDir(d => d === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortCol(col);
-      setSortDir('asc');
-    }
   };
 
   const removeResult = (id: number) => {
@@ -369,7 +372,7 @@ export default function QueryWorkspace({
             placeholder="Ask a question about your data…"
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && onAsk()}
+            onKeyDown={(e) => e.key === 'Enter' && !loading && onAsk()}
           />
           <button
             onClick={onAsk}
@@ -380,6 +383,12 @@ export default function QueryWorkspace({
             {loading ? <Activity size={16} className="animate-spin" /> : <Send size={16} />}
           </button>
         </div>
+        {askError && (
+          <div className="mt-3 bg-[#1a0a0a] border border-red-900/40 rounded-[8px] px-4 py-3 text-[13px] text-red-400 flex items-center gap-2">
+            <X size={14} className="shrink-0" />
+            <span>{askError}</span>
+          </div>
+        )}
       </div>
 
       {/* History entries — collapsible cards */}
@@ -500,13 +509,15 @@ export default function QueryWorkspace({
                   <Play size={16} /> Execute Query
                 </button>
 
+                {/* Single-row hero result */}
+                {results[item.id]?.hero_data && (
+                  <HeroCard heroData={results[item.id].hero_data!} />
+                )}
+
                 {/* Results table */}
                 {results[item.id] && (
                   <ResultsTable
                     result={results[item.id]}
-                    sortCol={sortCol}
-                    sortDir={sortDir}
-                    onSort={toggleSort}
                     onExportCSV={exportCSV}
                     onClear={() => removeResult(item.id)}
                   />
