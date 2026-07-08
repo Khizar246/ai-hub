@@ -12,6 +12,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Chromium + its OS-level dependencies for the News Agent's Playwright scraper
+RUN playwright install --with-deps chromium
+
 COPY . .
 
 EXPOSE 8000
