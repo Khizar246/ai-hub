@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PromptSQL - POC Proposal</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: white;
+        }
+
+        .container {
+            max-width: 960px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            color: #FFD700;
+            padding: 60px 40px;
+            text-align: center;
+            border-bottom: 4px solid #FFD700;
+        }
+
+        .header h1 {
+            font-size: 48px;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 18px;
+            color: #e8e8e8;
+            margin-bottom: 20px;
+        }
+
+        .section {
+            padding: 50px 40px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .section h2 {
+            font-size: 28px;
+            color: #1a1a1a;
+            margin-bottom: 25px;
+            border-left: 4px solid #FFD700;
+            padding-left: 15px;
+        }
+
+        .section h3 {
+            font-size: 16px;
+            color: #2d2d2d;
+            margin-top: 20px;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+
+        p {
+            margin-bottom: 14px;
+            line-height: 1.7;
+        }
+
+        ul, ol {
+            margin-left: 25px;
+            margin-bottom: 14px;
+        }
+
+        li {
+            margin-bottom: 8px;
+            line-height: 1.6;
+        }
+
+        .highlight {
+            background: #f5f1e8;
+            border-left: 4px solid #FFD700;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 2px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 14px;
+        }
+
+        table th {
+            background: #2d2d2d;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        table td {
+            padding: 11px 12px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        table tr:hover {
+            background: #f9f9f9;
+        }
+
+        .metric-row {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .metric {
+            background: #f5f1e8;
+            padding: 20px;
+            border-radius: 2px;
+            border-left: 4px solid #FFD700;
+        }
+
+        .metric-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: #FFD700;
+            margin-bottom: 5px;
+        }
+
+        .metric-label {
+            font-size: 13px;
+            color: #666;
+            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        .comparison {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .comparison-cell {
+            border: 1px solid #ddd;
+            padding: 20px;
+            border-radius: 2px;
+        }
+
+        .comparison-cell.highlight {
+            background: #f5f1e8;
+            border: 2px solid #FFD700;
+        }
+
+        .comparison-header {
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #1a1a1a;
+        }
+
+        .comparison-cell ul {
+            margin-left: 0;
+            list-style: none;
+        }
+
+        .comparison-cell li {
+            margin-bottom: 8px;
+            font-size: 13px;
+            padding-left: 18px;
+            position: relative;
+        }
+
+        .comparison-cell li:before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: #666;
+            font-weight: bold;
+        }
+
+        .comparison-cell.highlight li:before {
+            color: #FFD700;
+        }
+
+        .timeline {
+            margin: 25px 0;
+        }
+
+        .timeline-item {
+            padding: 20px;
+            border-left: 3px solid #FFD700;
+            margin-bottom: 15px;
+            background: #f9f9f9;
+        }
+
+        .timeline-date {
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-bottom: 5px;
+        }
+
+        .timeline-desc {
+            font-size: 13px;
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .footer {
+            background: #1a1a1a;
+            color: #e8e8e8;
+            padding: 30px 40px;
+            text-align: center;
+            font-size: 13px;
+        }
+
+        .footer p {
+            margin-bottom: 5px;
+        }
+
+        .flow-box {
+            background: white;
+            border: 1px solid #ddd;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 2px;
+            font-size: 14px;
+            line-height: 1.8;
+        }
+
+        .financial-table {
+            width: 100%;
+            margin: 20px 0;
+        }
+
+        .financial-table td:last-child {
+            text-align: right;
+            font-weight: 600;
+        }
+
+        @media print {
+            body {
+                background: white;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .comparison {
+                grid-template-columns: 1fr;
+            }
+            .metric-row {
+                grid-template-columns: 1fr;
+            }
+            .header h1 {
+                font-size: 36px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+
+    <!-- Header -->
+    <div class="header">
+        <h1>PromptSQL</h1>
+        <p>Enterprise Natural Language to SQL Platform</p>
+        <p style="font-size: 14px; margin: 20px 0 0;">POC Proposal for EY | July 2026</p>
+    </div>
+
+    <!-- Executive Summary -->
+    <div class="section">
+        <h2>Executive Summary</h2>
+        <p>PromptSQL is an enterprise-focused natural language to SQL platform that converts plain-English questions into validated, secure SQL queries. Unlike existing solutions prone to hallucination, PromptSQL combines LLM capabilities with deterministic validation and business guardrails.</p>
+
+        <div class="metric-row">
+            <div class="metric">
+                <div class="metric-value">25-30%</div>
+                <div class="metric-label">Efficiency Gain</div>
+            </div>
+            <div class="metric">
+                <div class="metric-value">5 min</div>
+                <div class="metric-label">Turnaround Time</div>
+            </div>
+        </div>
+
+        <h3>Key Differentiators</h3>
+        <ul>
+            <li>Column Descriptions prevent SQL hallucination through business context</li>
+            <li>Three-Pass Validation Pipeline (Generate → Review → Validate)</li>
+            <li>Read-Only Enforcement via AST-level SQL validation</li>
+            <li>Multi-database support (PostgreSQL, MySQL, MS SQL Server)</li>
+            <li>Complete audit trail for compliance</li>
+        </ul>
+    </div>
+
+    <!-- Problem Statement -->
+    <div class="section">
+        <h2>Problem Statement</h2>
+
+        <h3>Current Challenges</h3>
+        <table>
+            <tr>
+                <th>Issue</th>
+                <th>Impact</th>
+            </tr>
+            <tr>
+                <td>Ad-hoc data requests take 1-3 days</td>
+                <td>Delayed decision-making</td>
+            </tr>
+            <tr>
+                <td>Data teams bottlenecked by routine requests</td>
+                <td>Strategic work blocked</td>
+            </tr>
+            <tr>
+                <td>Existing NL-to-SQL tools hallucinate</td>
+                <td>Compliance and trust issues</td>
+            </tr>
+            <tr>
+                <td>No business context in LLM prompts</td>
+                <td>Incorrect results require rework</td>
+            </tr>
+        </table>
+
+        <h3>Sample Team Impact (5 BAs + 2 Data Engineers)</h3>
+        <ul>
+            <li>30% of BA time on ad-hoc data requests</li>
+            <li>40% of DE time on routine queries</li>
+            <li>~15 requests/week (mostly simple, answerable quickly)</li>
+            <li>2-3 errors/week slip through after delivery</li>
+        </ul>
+
+        <h3>Why Existing Tools Fall Short</h3>
+        <div class="comparison">
+            <div class="comparison-cell">
+                <div class="comparison-header">Generic AI (ChatGPT)</div>
+                <ul>
+                    <li>No database context</li>
+                    <li>Hallucinate table names</li>
+                    <li>No validation layer</li>
+                    <li>No audit trail</li>
+                </ul>
+            </div>
+            <div class="comparison-cell">
+                <div class="comparison-header">BI Tools (Tableau)</div>
+                <ul>
+                    <li>Requires pre-built dashboards</li>
+                    <li>High IT overhead</li>
+                    <li>Not for ad-hoc queries</li>
+                    <li>Expensive per user</li>
+                </ul>
+            </div>
+            <div class="comparison-cell highlight">
+                <div class="comparison-header">PromptSQL</div>
+                <ul>
+                    <li>Live schema context</li>
+                    <li>3-pass validation</li>
+                    <li>Read-only enforced</li>
+                    <li>Full audit trail</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Solution -->
+    <div class="section">
+        <h2>Proposed Solution</h2>
+
+        <h3>How It Works</h3>
+        <ol>
+            <li>Connect to any SQL database or upload Excel/CSV</li>
+            <li>Accept plain-English business questions</li>
+            <li>Run three-pass validation pipeline (generate → review → validate)</li>
+            <li>Execute query and return results in virtualized table</li>
+            <li>Log all activity for compliance</li>
+        </ol>
+
+        <h3>Three-Pass Pipeline</h3>
+        <div class="flow-box">
+            <strong>Pass 1 - Generation:</strong> Claude Sonnet receives schema, column descriptions, and sample rows. Generates SQL with strict constraints (explicit JOINs, LIMIT 10, no SELECT *).<br><br>
+            <strong>Pass 2 - Review:</strong> Second pass validates semantic correctness (JOIN conditions, GROUP BY completeness). Falls back to Pass 1 if review fails.<br><br>
+            <strong>Pass 3 - Validation:</strong> SQLGlot AST validation ensures read-only (no INSERT/UPDATE/DELETE). Executes on target database.
+        </div>
+
+        <h3>Enterprise Features</h3>
+        <table>
+            <tr>
+                <th>Feature</th>
+                <th>Benefit</th>
+            </tr>
+            <tr>
+                <td>Column Descriptions</td>
+                <td>Admin-defined business context prevents hallucination</td>
+            </tr>
+            <tr>
+                <td>Read-Only Enforcement</td>
+                <td>AST-level validation blocks dangerous operations</td>
+            </tr>
+            <tr>
+                <td>Audit Logging</td>
+                <td>JSON logs track every query for compliance</td>
+            </tr>
+            <tr>
+                <td>Rate Limiting</td>
+                <td>Per-session limits prevent abuse</td>
+            </tr>
+            <tr>
+                <td>Multi-Database</td>
+                <td>PostgreSQL, MySQL, MS SQL Server, SQLite, Excel</td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- Strategic Value -->
+    <div class="section">
+        <h2>Strategic Value for EY</h2>
+
+        <h3>Data Democratization</h3>
+        <p>Shift BAs from "waiting for data" to "self-serving insights." Frees data engineers for high-value strategic work.</p>
+
+        <h3>Advisory Opportunity</h3>
+        <p>Demonstrate on EY's data first, then sell to enterprise clients as managed service or licensing. Addresses a universal pain point.</p>
+
+        <h3>Operational Efficiency</h3>
+        <p>Reduce time-to-insight from 1 day to 5 minutes. Multiply savings across hundreds of BAs globally.</p>
+
+        <h3>Compliance & Risk</h3>
+        <p>Read-only enforcement, audit trails, and deterministic validation improve SOC 2 and ISO 27001 readiness.</p>
+
+        <div class="highlight">
+            <strong>Market Opportunity:</strong> Fortune 500 enterprises + mid-market = $2.8B TAM. PromptSQL targets the underserved "enterprise guardrails" segment.
+        </div>
+    </div>
+
+    <!-- Business Impact -->
+    <div class="section">
+        <h2>Business Impact</h2>
+
+        <h3>Baseline Calculation (7-person team)</h3>
+        <ul>
+            <li>5 Business Analysts + 2 Data Engineers</li>
+            <li>~538 addressable hours annually (30% BA + 40% DE time)</li>
+            <li>$10/hour fully loaded cost</li>
+        </ul>
+
+        <h3>Efficiency Gains with PromptSQL</h3>
+        <table class="financial-table">
+            <tr>
+                <td>Conservative (20% efficiency)</td>
+                <td>1,076 hours saved</td>
+                <td>$10,760/year</td>
+            </tr>
+            <tr style="background: #f5f1e8;">
+                <td><strong>Base Case (25% efficiency)</strong></td>
+                <td><strong>1,346 hours saved</strong></td>
+                <td><strong>$13,460/year</strong></td>
+            </tr>
+            <tr>
+                <td>Optimistic (30% efficiency)</td>
+                <td>1,615 hours saved</td>
+                <td>$16,150/year</td>
+            </tr>
+        </table>
+
+        <p><strong>Note:</strong> PromptSQL automates 25-30% of ad-hoc requests (single-table queries, basic joins, trend analysis). Data engineers still handle complex pipelines, governance, and compliance.</p>
+
+        <h3>Scaled to Enterprise</h3>
+        <p>Applied across 50+ EY teams: ~$67.5K annual savings. Payback period: ~3 months.</p>
+
+        <h3>Non-Monetary Benefits</h3>
+        <ul>
+            <li>12x faster turnaround (5 minutes vs 1 day)</li>
+            <li>Reduced bottlenecks for data teams</li>
+            <li>Improved data literacy across organization</li>
+            <li>Better employee retention in data functions</li>
+            <li>Enhanced compliance posture</li>
+        </ul>
+    </div>
+
+    <!-- Risks -->
+    <div class="section">
+        <h2>Risk Management</h2>
+
+        <table>
+            <tr>
+                <th>Risk</th>
+                <th>Severity</th>
+                <th>Mitigation</th>
+            </tr>
+            <tr>
+                <td>SQL accuracy issues</td>
+                <td>High</td>
+                <td>3-pass validation, column descriptions, sample rows, user review before execution</td>
+            </tr>
+            <tr>
+                <td>Unauthorized data access</td>
+                <td>High</td>
+                <td>Database permissions enforced, read-only AST validation, audit trails, schema control</td>
+            </tr>
+            <tr>
+                <td>User over-reliance</td>
+                <td>Medium</td>
+                <td>Training emphasis, confidence scores, monthly error tracking, random audits</td>
+            </tr>
+            <tr>
+                <td>LLM cost overruns</td>
+                <td>Medium</td>
+                <td>Rate limiting, usage monitoring, query caching, batch API for off-peak</td>
+            </tr>
+            <tr>
+                <td>Integration complexity</td>
+                <td>Medium</td>
+                <td>Network team involvement, VPN/bastion access, test on non-production data</td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- Technology -->
+    <div class="section">
+        <h2>Technical Architecture</h2>
+
+        <h3>Stack</h3>
+        <table>
+            <tr>
+                <th>Component</th>
+                <th>Technology</th>
+            </tr>
+            <tr>
+                <td>Frontend</td>
+                <td>React 18, TypeScript, Vite, Tailwind CSS</td>
+            </tr>
+            <tr>
+                <td>Backend</td>
+                <td>Python 3.11, FastAPI, Uvicorn</td>
+            </tr>
+            <tr>
+                <td>LLM</td>
+                <td>Claude Sonnet 4.5, Claude Opus 4.5 (vision)</td>
+            </tr>
+            <tr>
+                <td>SQL Validation</td>
+                <td>SQLGlot (deterministic, no LLM)</td>
+            </tr>
+            <tr>
+                <td>Session Management</td>
+                <td>Redis (sub-100ms lookup)</td>
+            </tr>
+            <tr>
+                <td>Databases</td>
+                <td>PostgreSQL, MySQL, MS SQL Server, SQLite</td>
+            </tr>
+        </table>
+
+        <h3>Performance Benchmarks</h3>
+        <ul>
+            <li>End-to-end latency: 5-15 seconds (question to results)</li>
+            <li>Database execution: <1s for queries on <10M rows</li>
+            <li>Results rendering: <500ms for 100K+ row tables (virtual scrolling)</li>
+            <li>Concurrent users: 50+ on single instance; scales horizontally to 500+</li>
+        </ul>
+
+        <h3>Cost Model</h3>
+        <ul>
+            <li>Anthropic API: ~$0.01-0.02 per query (negligible)</li>
+            <li>Infrastructure: ~$500-1,000/month for POC</li>
+            <li>Total POC cost (6 months): ~$10K amortized</li>
+        </ul>
+    </div>
+
+    <!-- Timeline -->
+    <div class="section">
+        <h2>POC Timeline (6 Weeks)</h2>
+
+        <div class="timeline">
+            <div class="timeline-item">
+                <div class="timeline-date">Week 1: Setup & Integration</div>
+                <div class="timeline-desc">Deploy backend/frontend/Redis. Configure database access. Set up audit logging.</div>
+            </div>
+            <div class="timeline-item">
+                <div class="timeline-date">Week 2: Core Implementation</div>
+                <div class="timeline-desc">Implement 3-pass pipeline. Connect to pilot databases. Build audit trails.</div>
+            </div>
+            <div class="timeline-item">
+                <div class="timeline-date">Week 3: Testing & Refinement</div>
+                <div class="timeline-desc">Internal testing. Collect feedback. Refine column descriptions. Tune prompts.</div>
+            </div>
+            <div class="timeline-item">
+                <div class="timeline-date">Week 4: Pilot Launch</div>
+                <div class="timeline-desc">Onboard 2-3 pilot teams (15-20 users). Conduct training. Daily monitoring.</div>
+            </div>
+            <div class="timeline-item">
+                <div class="timeline-date">Week 5: Validation & Metrics</div>
+                <div class="timeline-desc">Measure accuracy, latency, adoption. Calculate hours saved. Audit compliance.</div>
+            </div>
+            <div class="timeline-item">
+                <div class="timeline-date">Week 6: Documentation & Handoff</div>
+                <div class="timeline-desc">Write runbooks. Create guides. Present findings to EY leadership.</div>
+            </div>
+        </div>
+
+        <h3>Post-POC Roadmap</h3>
+        <ul>
+            <li><strong>Q3 2026:</strong> Expand to 50-100 users across 3-5 business units</li>
+            <li><strong>Q4 2026:</strong> Build SaaS version; sell to enterprise clients</li>
+            <li><strong>2027+:</strong> Add unstructured data, data discovery, regulated industry guardrails</li>
+        </ul>
+    </div>
+
+    <!-- Team -->
+    <div class="section">
+        <h2>Team Structure</h2>
+
+        <h3>POC Phase</h3>
+        <table>
+            <tr>
+                <th>Role</th>
+                <th>Hours/Week</th>
+                <th>Responsibility</th>
+            </tr>
+            <tr>
+                <td>Product & Engineering (You)</td>
+                <td>40</td>
+                <td>Full-stack development, LLM integration, architecture</td>
+            </tr>
+            <tr>
+                <td>EY DevOps Engineer</td>
+                <td>15-20</td>
+                <td>Cloud resources, network security, CI/CD pipeline</td>
+            </tr>
+            <tr>
+                <td>EY Data Lead</td>
+                <td>10</td>
+                <td>Pilot databases, column descriptions, SQL validation</td>
+            </tr>
+            <tr>
+                <td>Pilot Users (BAs)</td>
+                <td>5</td>
+                <td>Daily usage, feedback, accuracy validation</td>
+            </tr>
+        </table>
+
+        <p><strong>Handoff Plan:</strong> You build PromptSQL; EY DevOps runs it post-POC. Clear runbooks ensure smooth transition.</p>
+    </div>
+
+    <!-- Success Criteria -->
+    <div class="section">
+        <h2>POC Success Criteria</h2>
+
+        <table>
+            <tr>
+                <th>Metric</th>
+                <th>Target</th>
+                <th>Rationale</th>
+            </tr>
+            <tr>
+                <td>SQL Accuracy</td>
+                <td>≥85% correct results</td>
+                <td>Foundation for trust</td>
+            </tr>
+            <tr>
+                <td>Latency</td>
+                <td>5-15 seconds end-to-end</td>
+                <td>Justifies replacing 1-day wait</td>
+            </tr>
+            <tr>
+                <td>Pilot Usage</td>
+                <td>≥10 queries/user/week</td>
+                <td>Proves adoption</td>
+            </tr>
+            <tr>
+                <td>Read-Only Safety</td>
+                <td>0 INSERT/UPDATE/DELETE attempts</td>
+                <td>Compliance requirement</td>
+            </tr>
+            <tr>
+                <td>System Uptime</td>
+                <td>≥95% during POC</td>
+                <td>Production readiness</td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- Financial Projections -->
+    <div class="section">
+        <h2>Financial Projections</h2>
+
+        <h3>Revenue Model (Post-POC SaaS)</h3>
+        <table>
+            <tr>
+                <th>Year</th>
+                <th>Clients</th>
+                <th>Avg Deal</th>
+                <th>Revenue</th>
+            </tr>
+            <tr>
+                <td>2026 (Q4 launch)</td>
+                <td>5</td>
+                <td>$100K</td>
+                <td>$500K</td>
+            </tr>
+            <tr style="background: #f5f1e8;">
+                <td><strong>2027</strong></td>
+                <td><strong>25</strong></td>
+                <td><strong>$130K</strong></td>
+                <td><strong>$3.25M</strong></td>
+            </tr>
+            <tr>
+                <td>2028</td>
+                <td>50</td>
+                <td>$160K</td>
+                <td>$8M</td>
+            </tr>
+        </table>
+
+        <h3>Cost Structure (Year 1, 5 Clients)</h3>
+        <table>
+            <tr>
+                <td>LLM Costs (Anthropic)</td>
+                <td>$50K (10%)</td>
+            </tr>
+            <tr>
+                <td>Cloud Infrastructure</td>
+                <td>$60K (12%)</td>
+            </tr>
+            <tr>
+                <td>Personnel (3 FTE)</td>
+                <td>$250K (50%)</td>
+            </tr>
+            <tr>
+                <td>Professional Services</td>
+                <td>$40K (8%)</td>
+            </tr>
+            <tr>
+                <td>Other</td>
+                <td>$50K (10%)</td>
+            </tr>
+            <tr style="font-weight: 700; border-top: 2px solid #1a1a1a;">
+                <td>Total Cost</td>
+                <td>$450K (90%)</td>
+            </tr>
+            <tr style="background: #f5f1e8; font-weight: 700;">
+                <td>Gross Profit (@ $500K)</td>
+                <td>$50K (10%)</td>
+            </tr>
+        </table>
+
+        <p>Year 2+ with 15-20 clients: margins improve to 30-40% through scale.</p>
+    </div>
+
+    <!-- Next Steps -->
+    <div class="section">
+        <h2>Next Steps</h2>
+
+        <ol>
+            <li><strong>Week 1:</strong> Stakeholder alignment (Exec Sponsor, Data Leaders, IT Security)</li>
+            <li><strong>Week 2:</strong> Sign POC statement of work; provision cloud resources</li>
+            <li><strong>Week 3:</strong> Development begins; infrastructure setup</li>
+            <li><strong>Week 6:</strong> Pilot launch; measure accuracy and adoption</li>
+            <li><strong>Week 10:</strong> Present findings; decide on production rollout or external sales</li>
+        </ol>
+
+        <div class="highlight">
+            <strong>Bottom Line:</strong> PromptSQL delivers 25-30% efficiency gain with low risk, 3-month payback period, and significant revenue upside if productized for external sale.
+        </div>
+    </div>
+
+</div>
+
+<div class="footer">
+    <p>PromptSQL - Enterprise Natural Language to SQL Platform</p>
+    <p>POC Proposal for EY | July 2026 | Confidential</p>
+    <p style="margin-top: 10px;">Prepared by: Khizar | khizerstudy75@gmail.com</p>
+</div>
+
+</body>
+</html>

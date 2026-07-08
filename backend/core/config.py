@@ -27,10 +27,6 @@ class Settings(BaseSettings):
     # Redis
     REDIS_URL: str = "redis://localhost:6379"
 
-    # Auth — when set, /agents/* requires login with this access code.
-    # Leave empty to run without authentication (local dev default).
-    APP_ACCESS_CODE: str = ""
-
     # Storage paths
     VECTOR_STORE_PATH: str = "./storage/vector_stores"
     UPLOADS_PATH: str = "./storage/uploads"

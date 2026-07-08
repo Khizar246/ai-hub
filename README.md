@@ -47,7 +47,6 @@ All settings load from `backend/.env` via pydantic-settings. Required: `ANTHROPI
 |---|---|---|
 | `CLAUDE_MODEL` | `claude-sonnet-4-5` | Main text-generation model |
 | `CLAUDE_VISION_MODEL` | `claude-opus-4-5` | PDF image/table extraction |
-| `APP_ACCESS_CODE` | *(empty — auth off)* | When set, the app requires login with this access code |
 
 See `.env.example` for the full list.
 
@@ -72,7 +71,7 @@ CI runs the backend test suite and the frontend typecheck/build on every push an
 
 Push to `main` → GitHub Actions CI → Railway redeploys the backend, Vercel redeploys the frontend.
 
-- **Railway** — root `backend/`, start `uvicorn main:app --host 0.0.0.0 --port $PORT`; set `ANTHROPIC_API_KEY`, `VOYAGE_API_KEY`, `REDIS_URL` (and `APP_ACCESS_CODE` to enable the login gate)
+- **Railway** — root `backend/`, start `uvicorn main:app --host 0.0.0.0 --port $PORT`; set `ANTHROPIC_API_KEY`, `VOYAGE_API_KEY`, `REDIS_URL`
 - **Vercel** — root `frontend/`, build `npm run build`, output `dist/`; set `VITE_API_URL` to the Railway backend URL
 
 ## Repository Layout

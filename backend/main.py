@@ -8,7 +8,6 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from core import telemetry
-from core.auth import AuthMiddleware, router as auth_router
 from core.exceptions import register_exception_handlers
 from core.logger import get_logger
 from core.session_manager import session_manager
@@ -38,15 +37,10 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Innermost middleware run last: rate limiting happens before auth validation,
-# so the login endpoint itself is brute-force protected. CORS stays outermost.
-app.add_middleware(AuthMiddleware)
 app.add_middleware(RateLimiterMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    # The app authenticates via the X-Session-ID header, not cookies —
-    # wildcard origins with credentials enabled is an unsafe combination.
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -55,7 +49,6 @@ app.add_middleware(RequestLoggerMiddleware)
 
 register_exception_handlers(app)
 
-app.include_router(auth_router, prefix="/auth", tags=["Auth"])
 app.include_router(audit_router, prefix="/agents/audit", tags=["Audit"])
 app.include_router(news_router, prefix="/agents/news", tags=["News"])
 app.include_router(data_router, prefix="/agents/data", tags=["Data"])
