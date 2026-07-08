@@ -1,18 +1,21 @@
 // Generic agent page: header + collapsible accordions + agent UI.
 
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { useParams, Navigate } from 'react-router-dom';
 import { FileSearch, Newspaper, Database, ChevronDown, ChevronUp, Info, BookOpen } from 'lucide-react';
 import { getAgent } from '../lib/agentRegistry';
-import AuditAgent from '../agents/audit/AuditAgent';
-import NewsAgent from '../agents/news/NewsAgent';
-import DataAgent from '../agents/data/DataAgent';
 
 const iconMap: Record<string, React.ElementType> = {
   FileSearch,
   Newspaper,
   Database,
 };
+
+// Each agent (and its heavy deps — syntax highlighting, virtualised tables)
+// only loads when its own page is visited, instead of all three bundled up front.
+const AuditAgent = lazy(() => import('../agents/audit/AuditAgent'));
+const NewsAgent = lazy(() => import('../agents/news/NewsAgent'));
+const DataAgent = lazy(() => import('../agents/data/DataAgent'));
 
 const agentComponents: Record<string, React.ReactNode> = {
   audit: <AuditAgent />,
@@ -112,7 +115,17 @@ export default function AgentPage() {
       </div>
 
       {/* Agent interactive component */}
-      {component ?? (
+      {component ? (
+        <Suspense
+          fallback={
+            <div className="border border-[#1e1e1e] bg-[#111111] rounded-[10px] flex items-center justify-center py-16 md:py-20">
+              <p className="text-[14px] text-[#525252]">Loading...</p>
+            </div>
+          }
+        >
+          {component}
+        </Suspense>
+      ) : (
         <div className="border border-[#1e1e1e] bg-[#111111] rounded-[10px] flex items-center justify-center py-16 md:py-20">
           <p className="text-[14px] text-[#525252]">Agent UI coming soon</p>
         </div>

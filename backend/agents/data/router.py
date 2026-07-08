@@ -19,7 +19,8 @@ from agents.data.schemas import (
     PostgresMetadataRequest,
     TableReview,
 )
-from core import telemetry
+from core import crypto, telemetry
+from core.config import settings
 from core.exceptions import AgentError, DatabaseConnectionError
 from core.logger import get_logger
 from core.session_manager import session_manager
@@ -58,6 +59,13 @@ def _require_session(x_session_id: str | None) -> str:
     return x_session_id
 
 
+async def _load_session_config(session_id: str) -> PostgresConfig | None:
+    """Read + decrypt the stored server-DB config; None when absent/undecryptable."""
+    raw = await session_manager.get(session_id, _PG_CONFIG_KEY)
+    data = crypto.decrypt_json(raw)
+    return PostgresConfig(**data) if data else None
+
+
 # ---------------------------------------------------------------------------
 # /parse-excel
 # ---------------------------------------------------------------------------
@@ -69,8 +77,13 @@ async def parse_excel(
 ) -> dict:
     """Upload Excel/CSV file, write tables to session SQLite DB, return table metadata."""
     session_id = _require_session(x_session_id)
+    contents = await file.read()
+    if len(contents) > settings.MAX_UPLOAD_MB * 1024 * 1024:
+        raise HTTPException(
+            status_code=413,
+            detail=f"File too large — the limit is {settings.MAX_UPLOAD_MB} MB.",
+        )
     try:
-        contents = await file.read()
         tables = await asyncio.to_thread(
             db_connector.parse_excel_to_sqlite, contents, session_id, file.filename or ""
         )
@@ -107,7 +120,10 @@ async def list_postgres_tables(
     try:
         connector = get_connector(config)
         tables = await asyncio.to_thread(connector.list_tables)
-        await session_manager.set(session_id, _PG_CONFIG_KEY, config.model_dump(), ttl=_SESSION_TTL)
+        # Credentials are encrypted at rest — Redis never sees the plaintext password.
+        await session_manager.set(
+            session_id, _PG_CONFIG_KEY, crypto.encrypt_json(config.model_dump()), ttl=_SESSION_TTL
+        )
         await session_manager.set(session_id, _DIALECT_KEY, config.db_type, ttl=_SESSION_TTL)
         return {"tables": tables}
     except DatabaseConnectionError as exc:
@@ -200,9 +216,7 @@ async def finalize_metadata(
     # any failure just means no samples.
     config: PostgresConfig | None = None
     if data.dialect != "sqlite":
-        pg_config_data = await session_manager.get(session_id, _PG_CONFIG_KEY)
-        if pg_config_data:
-            config = PostgresConfig(**pg_config_data)
+        config = await _load_session_config(session_id)
     samples_text = await asyncio.to_thread(
         _build_samples_text, data.tables, data.dialect, config, session_id
     )
@@ -286,9 +300,7 @@ async def execute_query(
     # Resolve server-DB config: prefer request body, fall back to session
     config = req.config
     if req.dialect in ("postgres", "postgresql", "mysql", "mssql") and config is None:
-        pg_config_data = await session_manager.get(session_id, _PG_CONFIG_KEY)
-        if pg_config_data:
-            config = PostgresConfig(**pg_config_data)
+        config = await _load_session_config(session_id)
 
     try:
         result = await asyncio.to_thread(

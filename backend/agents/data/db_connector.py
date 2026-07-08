@@ -60,7 +60,9 @@ def connect_postgres(config: PostgresConfig) -> psycopg2.extensions.connection:
             password=config.password,
             sslmode="require" if config.ssl_required else "prefer",
             connect_timeout=_CONNECT_TIMEOUT_S,
-            options=f"-c statement_timeout={_QUERY_TIMEOUT_MS}",
+            # default_transaction_read_only is the database-level backstop:
+            # even if a write slipped past SQL parsing, Postgres rejects it.
+            options=f"-c statement_timeout={_QUERY_TIMEOUT_MS} -c default_transaction_read_only=on",
         )
     except Exception as exc:
         raise DatabaseConnectionError(f"Postgres connection failed: {exc}") from exc
@@ -157,13 +159,18 @@ class MySQLConnector:
             )
         except Exception as exc:
             raise DatabaseConnectionError(f"MySQL connection failed: {exc}") from exc
-        try:
-            # SELECT-statement timeout (MySQL 5.7.8+); ignored where unsupported (MariaDB)
-            cursor = conn.cursor()
-            cursor.execute(f"SET SESSION MAX_EXECUTION_TIME={_QUERY_TIMEOUT_MS}")
-            cursor.close()
-        except Exception:
-            pass
+        # Best-effort session hardening; each statement is ignored where
+        # unsupported (e.g. MariaDB lacks MAX_EXECUTION_TIME).
+        for stmt in (
+            f"SET SESSION MAX_EXECUTION_TIME={_QUERY_TIMEOUT_MS}",  # SELECT timeout (MySQL 5.7.8+)
+            "SET SESSION TRANSACTION READ ONLY",  # database-level write backstop (MySQL 5.6+)
+        ):
+            try:
+                cursor = conn.cursor()
+                cursor.execute(stmt)
+                cursor.close()
+            except Exception:
+                pass
         return conn
 
     def list_tables(self) -> list[str]:
@@ -427,7 +434,9 @@ def execute_sql(
 
             return {"columns": columns, "rows": rows, "hero_data": hero_data}
         else:
-            conn.commit()  # type: ignore[union-attr]
-            return {"columns": ["Status"], "rows": [["Operation Successful"]], "hero_data": None}
+            # Read-only engine: a statement with no result set is never
+            # committed — roll back so nothing can mutate the database.
+            conn.rollback()
+            return {"columns": ["Status"], "rows": [["Statement produced no results"]], "hero_data": None}
     finally:
         conn.close()

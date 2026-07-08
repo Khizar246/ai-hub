@@ -38,6 +38,9 @@ pyodbc==5.1.0
 # --- Session & Caching ---
 redis==8.0.1
 
+# --- Security ---
+cryptography==49.0.0  # Fernet encryption of DB credentials at rest in Redis
+
 # --- Data & Export ---
 pandas==3.0.3
 openpyxl==3.1.5

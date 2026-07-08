@@ -16,8 +16,18 @@ _MAX_REQUESTS_PER_WINDOW = 20
 _PRUNE_THRESHOLD = 10_000  # cap tracked keys so memory can't grow unbounded
 
 
+def _client_key(request: Request) -> str:
+    """Rate-limit key: the client IP. The X-Session-ID header is client-chosen
+    and trivially rotated, so it must not be the key. Behind a proxy (Railway)
+    the real IP is the first hop in X-Forwarded-For."""
+    forwarded = request.headers.get("X-Forwarded-For", "")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "anonymous"
+
+
 class RateLimiterMiddleware(BaseHTTPMiddleware):
-    """Sliding-window limiter keyed by session ID (falls back to client IP)."""
+    """Sliding-window limiter keyed by client IP."""
 
     def __init__(self, app):
         super().__init__(app)
@@ -35,9 +45,7 @@ class RateLimiterMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next):
         if request.method == "POST" and request.url.path.endswith(_LIMITED_PATH_SUFFIXES):
-            key = request.headers.get("X-Session-ID") or (
-                request.client.host if request.client else "anonymous"
-            )
+            key = _client_key(request)
             now = time.monotonic()
             self._prune(now)
             hits = self._hits[key]

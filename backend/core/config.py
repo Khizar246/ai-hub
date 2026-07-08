@@ -27,6 +27,18 @@ class Settings(BaseSettings):
     # Redis
     REDIS_URL: str = "redis://localhost:6379"
 
+    # Security
+    # When set, /agents/* and /stats require login (POST /auth/login → bearer
+    # token). Empty = auth disabled (local dev default).
+    APP_ACCESS_CODE: str = ""
+    # Comma-separated list of allowed CORS origins; "*" = allow all (dev only).
+    ALLOWED_ORIGINS: str = "*"
+    # Encrypts DB credentials at rest in Redis. Falls back to a key derived
+    # from ANTHROPIC_API_KEY when unset, so encryption is always on.
+    SESSION_SECRET_KEY: str = ""
+    # Max size for /parse-excel uploads (files are read into memory).
+    MAX_UPLOAD_MB: int = 20
+
     # Storage paths
     VECTOR_STORE_PATH: str = "./storage/vector_stores"
     UPLOADS_PATH: str = "./storage/uploads"

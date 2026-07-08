@@ -67,9 +67,15 @@ def assert_read_only(sql: str, dialect: str) -> None:
                 )
         return
 
-    # SQLGlot couldn't parse it — fall back to a keyword check so odd but
-    # harmless dialect quirks still run while writes stay blocked.
-    if not _READ_ONLY_FALLBACK.match(sql or ""):
+    # SQLGlot couldn't parse it. Server databases get no benefit of the
+    # doubt — SQL we can't verify never reaches someone's live database.
+    if to_sqlglot_dialect(dialect) != "sqlite":
+        raise ValueError("Could not verify the SQL as read-only — statement rejected.")
+
+    # Session SQLite (the user's own uploaded copy): allow a strict fallback —
+    # one statement, no embedded semicolons, starting with SELECT/WITH.
+    candidate = (sql or "").strip().rstrip("; \t\n")
+    if ";" in candidate or not _READ_ONLY_FALLBACK.match(candidate):
         raise ValueError("Only read-only SELECT queries can be executed.")
 
 

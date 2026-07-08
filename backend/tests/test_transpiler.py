@@ -67,6 +67,24 @@ class TestReadOnlyGuard:
         with pytest.raises(ValueError):
             transpiler.assert_read_only(sql, "sqlite")
 
+    @pytest.mark.parametrize("dialect", ["postgresql", "postgres", "mysql", "mssql"])
+    def test_unparseable_rejected_for_server_databases(self, dialect):
+        # SQL we can't verify never reaches a live customer database.
+        with pytest.raises(ValueError):
+            transpiler.assert_read_only("SELECT !!!", dialect)
+
+    def test_unparseable_select_allowed_for_sqlite(self):
+        # Session SQLite is the user's own uploaded copy — a strict
+        # single-statement SELECT fallback is acceptable there.
+        transpiler.assert_read_only("SELECT !!!", "sqlite")  # must not raise
+
+    def test_unparseable_multistatement_rejected_for_sqlite(self):
+        with pytest.raises(ValueError):
+            transpiler.assert_read_only("SELECT !!! ; DROP TABLE t", "sqlite")
+
+    def test_trailing_semicolon_still_allowed_in_fallback(self):
+        transpiler.assert_read_only("SELECT !!! ;", "sqlite")  # must not raise
+
 
 class TestCleanExplanation:
     def test_fourth_wall_phrases_removed(self):
