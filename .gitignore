@@ -49,9 +49,12 @@ frontend/.vite/
 
 # Local documentation
 CLAUDE.md
+spec.md
+status.md
 README_project.md
 AI_Hub_Project_Documentation.docx
 PromptSQL_POC_EY.html
+PromptSQL - POC Proposal.pdf
 
 # OS
 .DS_Store

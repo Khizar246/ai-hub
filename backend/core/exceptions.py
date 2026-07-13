@@ -3,6 +3,10 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
+from core.logger import get_logger
+
+logger = get_logger("exceptions")
+
 
 class AIHubException(Exception):
     """Base exception for all AI Hub errors."""
@@ -40,7 +44,7 @@ class DatabaseConnectionError(AIHubException):
 
 
 class ScrapingError(AIHubException):
-    """Raised when Crawl4AI fails to scrape a URL."""
+    """Raised when the news scraper fails to fetch or render a URL."""
 
     def __init__(self, message: str) -> None:
         super().__init__(message, status_code=422)
@@ -51,14 +55,20 @@ def register_exception_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(AIHubException)
     async def _aihub_handler(request: Request, exc: AIHubException) -> JSONResponse:
+        # `detail` is the key the frontend reads (FastAPI HTTPException convention);
+        # `error` is kept for any older consumers.
         return JSONResponse(
             status_code=exc.status_code,
-            content={"error": exc.message, "type": type(exc).__name__},
+            content={"detail": exc.message, "error": exc.message, "type": type(exc).__name__},
         )
 
     @app.exception_handler(Exception)
     async def _generic_handler(request: Request, exc: Exception) -> JSONResponse:
+        # Log the full traceback so 500s are diagnosable from server logs, even
+        # though the client only sees a generic message.
+        logger.exception(f"unhandled_exception path={request.url.path} error={exc}")
+        message = "An unexpected error occurred."
         return JSONResponse(
             status_code=500,
-            content={"error": "An unexpected error occurred.", "type": "InternalServerError"},
+            content={"detail": message, "error": message, "type": "InternalServerError"},
         )

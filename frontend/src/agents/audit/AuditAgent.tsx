@@ -54,11 +54,11 @@ export default function AuditAgent() {
       setAuditCategory(res.data.category);
       setStep('Results');
     } catch (err: unknown) {
-      const detail =
+      const data =
         err && typeof err === 'object' && 'response' in err
-          ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
+          ? (err as { response?: { data?: { detail?: string; error?: string } } }).response?.data
           : undefined;
-      setAuditError(detail || 'Audit failed. Please try again.');
+      setAuditError(data?.detail || data?.error || 'Audit failed. Please try again.');
     }
     setAuditLoading(false);
   };

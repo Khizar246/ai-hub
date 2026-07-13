@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import io
 import os
+import re
 import tempfile
 from pathlib import Path
 
@@ -46,6 +47,23 @@ SESSION_TTL = 7200  # 2 hours
 _FIELD_FILES = "audit:dynamic_files"
 _FIELD_QUESTIONS = "audit:dynamic_questions"
 
+# Session IDs from the client end up as directory names — restrict to a safe
+# charset so "../" can never escape the uploads directory.
+_SESSION_ID_RE = re.compile(r"^[A-Za-z0-9_-]{8,64}$")
+
+_MAX_UPLOAD_BYTES = settings.MAX_UPLOAD_MB * 1024 * 1024
+
+
+def _require_session(session_id: str) -> str:
+    if not _SESSION_ID_RE.fullmatch(session_id):
+        raise HTTPException(status_code=400, detail="Invalid X-Session-ID format.")
+    return session_id
+
+
+def _safe_filename(filename: str) -> str:
+    """Strip any path components from a client-supplied filename."""
+    return Path(filename).name
+
 
 def _results_field(category: str) -> str:
     return f"audit:results:{category}"
@@ -61,14 +79,14 @@ async def upload_documents(
     x_session_id: str = Header(..., alias="X-Session-ID"),
 ):
     """Accept multiple document uploads (PDF/PPTX/DOCX/XLSX/CSV), save to session dir."""
-    session_id = x_session_id
+    session_id = _require_session(x_session_id)
     session_dir = UPLOAD_PATH / session_id
     session_dir.mkdir(parents=True, exist_ok=True)
 
     uploaded: list[dict] = []
 
     for file in files:
-        filename = file.filename or ""
+        filename = _safe_filename(file.filename or "")
         ext = Path(filename).suffix.lower()
 
         if ext not in SUPPORTED_EXTENSIONS:
@@ -82,6 +100,11 @@ async def upload_documents(
             )
 
         contents = await file.read()
+        if len(contents) > _MAX_UPLOAD_BYTES:
+            raise HTTPException(
+                status_code=413,
+                detail=f"'{filename}' is too large — the limit is {settings.MAX_UPLOAD_MB} MB.",
+            )
         save_path = session_dir / filename
         save_path.write_bytes(contents)
         uploaded.append({"filename": filename, "type": ext.lstrip(".").upper()})
@@ -109,12 +132,17 @@ async def upload_questions(
     x_session_id: str = Header(..., alias="X-Session-ID"),
 ):
     """Validate a CSV of audit questions. On success, cache parsed questions in Redis."""
-    session_id = x_session_id
+    session_id = _require_session(x_session_id)
 
     if not file.filename or not file.filename.lower().endswith(".csv"):
         raise HTTPException(status_code=422, detail="Only CSV files are accepted for questions.")
 
     contents = await file.read()
+    if len(contents) > _MAX_UPLOAD_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail=f"The questions file is too large — the limit is {settings.MAX_UPLOAD_MB} MB.",
+        )
 
     with tempfile.NamedTemporaryFile(delete=False, suffix=".csv") as tmp:
         tmp.write(contents)
@@ -215,7 +243,16 @@ async def process_dynamic(
             detail="No content could be extracted from the uploaded files.",
         )
 
-    chunks_stored = await asyncio.to_thread(embed_pages, session_id, all_pages)
+    try:
+        chunks_stored = await asyncio.to_thread(embed_pages, session_id, all_pages)
+    except Exception as exc:
+        # Embedding depends on VoyageAI — surface the real cause (bad/missing
+        # API key, rate limit, network) instead of an opaque 500.
+        logger.error(f"dynamic_embed_error session_id={session_id} error={exc}")
+        raise HTTPException(
+            status_code=502,
+            detail=f"Embedding failed while indexing the documents: {exc}",
+        ) from exc
 
     logger.info(f"dynamic_process_complete session_id={session_id} files={len(file_summaries)} pages={len(all_pages)} chunks={chunks_stored}")
 

@@ -17,6 +17,20 @@ client = Anthropic(
 )
 
 
+def _first_text(response) -> str:
+    """Return the first text block from a Messages response.
+
+    The SDK can return non-text blocks (e.g. tool_use) first; indexing
+    content[0].text blindly would raise AttributeError. Fall back to the first
+    block that actually carries text, else an empty string.
+    """
+    for block in response.content:
+        text = getattr(block, "text", None)
+        if text is not None:
+            return text
+    return ""
+
+
 def call_claude(
     prompt: str,
     system: str = "",
@@ -40,7 +54,7 @@ def call_claude(
     telemetry.record_llm_call(
         resolved_model, response.usage.input_tokens, response.usage.output_tokens
     )
-    return response.content[0].text  # type: ignore[union-attr]
+    return _first_text(response)
 
 
 def call_claude_vision(image_bytes: bytes, prompt: str) -> str:
@@ -75,7 +89,7 @@ def call_claude_vision(image_bytes: bytes, prompt: str) -> str:
         response.usage.input_tokens,
         response.usage.output_tokens,
     )
-    return response.content[0].text  # type: ignore[union-attr]
+    return _first_text(response)
 
 
 async def stream_claude(

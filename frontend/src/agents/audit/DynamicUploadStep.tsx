@@ -226,11 +226,11 @@ export default function DynamicUploadStep({
 
       onProcessed(res.data as ProcessResult);
     } catch (err: unknown) {
-      const detail =
+      const data =
         err && typeof err === 'object' && 'response' in err
-          ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
+          ? (err as { response?: { data?: { detail?: string; error?: string } } }).response?.data
           : undefined;
-      setError(detail || 'Processing failed. Please try again.');
+      setError(data?.detail || data?.error || 'Processing failed. Please try again.');
       setPhase('idle');
       setProgress(0);
     }

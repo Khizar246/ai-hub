@@ -85,15 +85,15 @@ export default function ChatInterface({ sessionId: _sessionId, articleCount }: C
       };
       setMessages((prev) => [...prev, assistantMessage]);
     } catch (err: unknown) {
-      const detail =
+      const data =
         err && typeof err === 'object' && 'response' in err
-          ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
+          ? (err as { response?: { data?: { detail?: string; error?: string } } }).response?.data
           : undefined;
       setMessages((prev) => [
         ...prev,
         {
           role: 'assistant',
-          content: detail || 'Something went wrong. Please try again.',
+          content: data?.detail || data?.error || 'Something went wrong. Please try again.',
           sources: [],
           confidence: 'low',
         },

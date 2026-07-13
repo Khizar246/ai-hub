@@ -1,8 +1,10 @@
 # Playwright (headless Chromium) + BeautifulSoup scraper.
 # Renders JS-driven pages (live scoreboards, SPAs) before extracting text, so
 # pages that build their content client-side aren't left as empty shells —
-# the httpx-only approach could only ever see server-delivered HTML.
-# Each URL is scraped independently so one failure never aborts the batch.
+# a plain HTTP GET could only ever see server-delivered HTML.
+# URLs are scraped concurrently; one failure never aborts the batch.
+
+import asyncio
 
 from bs4 import BeautifulSoup
 from playwright.async_api import Browser, async_playwright
@@ -11,8 +13,21 @@ from core.logger import get_logger
 
 logger = get_logger("news.scraper")
 
-_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-_NAV_TIMEOUT_MS = 30_000
+# A complete, current Chrome UA. A truncated string (missing the
+# "(KHTML, like Gecko) Chrome/… Safari/537.36" tail) is an instant tell for
+# bot-detection (Cloudflare/Akamai/DataDome) and gets the request blocked.
+_USER_AGENT = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+)
+_NAV_TIMEOUT_MS = 25_000
+# After the DOM is ready, give client-side rendering a brief moment to paint.
+# networkidle is deliberately avoided: news sites run ads/analytics/trackers
+# continuously, so the network never goes idle and every page hits the timeout.
+_SETTLE_MS = 1_500
+# Cap concurrent browser contexts so a 5-URL batch doesn't spawn 5 heavy
+# renders at once on a small container.
+_MAX_CONCURRENCY = 3
 _NOISE_TAGS = ["script", "style", "nav", "footer", "header", "aside", "advertisement"]
 
 
@@ -21,12 +36,14 @@ async def _scrape_one(browser: Browser, url: str) -> dict:
     context = await browser.new_context(user_agent=_USER_AGENT)
     try:
         page = await context.new_page()
+        # domcontentloaded fires reliably; a short settle lets SPA content paint.
+        # No networkidle, no second navigation — both were the main cause of the
+        # 30s-per-URL timeouts that made most ingests fail.
+        await page.goto(url, timeout=_NAV_TIMEOUT_MS, wait_until="domcontentloaded")
         try:
-            await page.goto(url, timeout=_NAV_TIMEOUT_MS, wait_until="networkidle")
+            await page.wait_for_timeout(_SETTLE_MS)
         except Exception:
-            # Some pages (long-polling widgets, live scoreboards) never go fully
-            # idle — fall back to whatever has rendered once DOM content is ready.
-            await page.goto(url, timeout=_NAV_TIMEOUT_MS, wait_until="domcontentloaded")
+            pass
 
         html = await page.content()
         soup = BeautifulSoup(html, "lxml")
@@ -48,7 +65,11 @@ async def _scrape_one(browser: Browser, url: str) -> dict:
         if word_count < 50:
             return {
                 "url": url, "title": title, "content": "",
-                "word_count": 0, "error": "Insufficient content extracted",
+                "word_count": 0,
+                "error": (
+                    "Could not extract readable article text — the page may be "
+                    "paywalled, require a login, or block automated access."
+                ),
             }
 
         logger.info(f"scraped url={url} title={title[:50]} words={word_count}")
@@ -73,6 +94,9 @@ async def scrape_urls(urls: list[str]) -> list[dict]:
     client-rendered pages — live sports scorecards, SPA-driven news sites,
     dashboards — are captured the same as static article/wiki pages.
 
+    URLs are scraped concurrently (bounded by a semaphore). Results preserve
+    input order.
+
     Returns a list of dicts, one per URL:
         url        – original URL
         title      – page title extracted from h1 or <title>
@@ -80,14 +104,15 @@ async def scrape_urls(urls: list[str]) -> list[dict]:
         word_count – rough word count of the content
         error      – None on success, error message string on failure
     """
-    results: list[dict] = []
-
     async with async_playwright() as pw:
         browser = await pw.chromium.launch(headless=True)
+        semaphore = asyncio.Semaphore(_MAX_CONCURRENCY)
+
+        async def _bounded(url: str) -> dict:
+            async with semaphore:
+                return await _scrape_one(browser, url)
+
         try:
-            for url in urls:
-                results.append(await _scrape_one(browser, url))
+            return await asyncio.gather(*[_bounded(url) for url in urls])
         finally:
             await browser.close()
-
-    return results

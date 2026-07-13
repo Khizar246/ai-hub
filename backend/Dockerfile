@@ -1,4 +1,4 @@
-# Backend Dockerfile: Python 3.12-slim image running FastAPI via uvicorn
+# Backend Dockerfile: Python 3.11-slim image running FastAPI via uvicorn
 
 FROM python:3.11-slim
 

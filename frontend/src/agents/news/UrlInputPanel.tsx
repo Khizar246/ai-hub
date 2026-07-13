@@ -49,11 +49,11 @@ export default function UrlInputPanel({ sessionId: _sessionId, onIngested }: Url
       setArticles(summaries);
       onIngested(summaries);
     } catch (err: unknown) {
-      const detail =
+      const data =
         err && typeof err === 'object' && 'response' in err
-          ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
+          ? (err as { response?: { data?: { detail?: string; error?: string } } }).response?.data
           : undefined;
-      setError(detail || 'Ingestion failed. Check your URLs and try again.');
+      setError(data?.detail || data?.error || 'Ingestion failed. Check your URLs and try again.');
     }
     setLoading(false);
   };

@@ -285,11 +285,11 @@ export default function QueryWorkspace({
       setQuestion('');
       onStatusChange?.('Success');
     } catch (err: unknown) {
-      const detail =
+      const data =
         err && typeof err === 'object' && 'response' in err
-          ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
+          ? (err as { response?: { data?: { detail?: string; error?: string } } }).response?.data
           : undefined;
-      setAskError(detail || 'SQL generation failed. Please try rephrasing your question.');
+      setAskError(data?.detail || data?.error || 'SQL generation failed. Please try rephrasing your question.');
       onStatusChange?.('AI Error');
     }
     setLoading(false);
@@ -303,11 +303,11 @@ export default function QueryWorkspace({
       setResults((prev) => ({ ...prev, [id]: res.data }));
       onStatusChange?.('Query Success');
     } catch (err: unknown) {
-      const detail =
+      const data =
         err && typeof err === 'object' && 'response' in err
-          ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
+          ? (err as { response?: { data?: { detail?: string; error?: string } } }).response?.data
           : undefined;
-      setExecErrors((prev) => ({ ...prev, [id]: detail || 'Execution failed.' }));
+      setExecErrors((prev) => ({ ...prev, [id]: data?.detail || data?.error || 'Execution failed.' }));
       onStatusChange?.('Error');
     }
   };

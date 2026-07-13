@@ -46,12 +46,12 @@ async def ingest(
     x_session_id: Annotated[str | None, Header()] = None,
 ) -> IngestResponse:
     """
-    Scrape each URL with Crawl4AI, embed only new URLs (URL-based caching),
-    and return per-article processing summaries.
+    Scrape each URL (headless Chromium), embed only new URLs (URL-based
+    caching), and return per-article processing summaries.
     """
     session_id = _require_session(x_session_id)
 
-    # 1. Scrape all URLs concurrently (crawl4ai is async-native)
+    # 1. Scrape all URLs concurrently (Playwright renders each page)
     scraped = await news_scraper.scrape_urls(request.urls)
 
     # 2. Determine which URLs are already embedded for this session
